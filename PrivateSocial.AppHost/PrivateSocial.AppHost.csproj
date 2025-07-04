@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Sdk Name="Aspire.AppHost.Sdk" Version="9.3.0"/>
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <UserSecretsId>1c5887ca-509a-436d-a84a-9c19ed87f2cc</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\PrivateSocial.ApiService\PrivateSocial.ApiService.csproj"/>
+        <ProjectReference Include="..\PrivateSocial.Web\PrivateSocial.Web.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Aspire.Hosting.AppHost" Version="9.3.0"/>
+        <PackageReference Include="Aspire.Hosting.Redis" Version="9.3.0"/>
+    </ItemGroup>
+
+</Project>
