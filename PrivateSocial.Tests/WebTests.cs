@@ -12,7 +12,8 @@ public class WebTests
         // Arrange
         var cancellationToken = TestContext.Current.CancellationToken;
 
-        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.PrivateSocial_AppHost>(cancellationToken);
+        var appHost =
+            await DistributedApplicationTestingBuilder.CreateAsync<Projects.PrivateSocial_AppHost>(cancellationToken);
         appHost.Services.AddLogging(logging =>
         {
             logging.SetMinimumLevel(LogLevel.Debug);
@@ -31,7 +32,8 @@ public class WebTests
 
         // Act
         var httpClient = app.CreateHttpClient("webfrontend");
-        await app.ResourceNotifications.WaitForResourceHealthyAsync("webfrontend", cancellationToken).WaitAsync(DefaultTimeout, cancellationToken);
+        await app.ResourceNotifications.WaitForResourceHealthyAsync("webfrontend", cancellationToken)
+            .WaitAsync(DefaultTimeout, cancellationToken);
         var response = await httpClient.GetAsync("/", cancellationToken);
 
         // Assert
