@@ -1,0 +1,119 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using PrivateSocial.ApiService.Data;
+using PrivateSocial.ApiService.Data.Entities;
+
+namespace PrivateSocial.ApiService.Services;
+
+public class AuthService : IAuthService
+{
+    private readonly ApplicationDbContext _context;
+    private readonly IConfiguration _configuration;
+    private readonly ILogger<AuthService> _logger;
+
+    public AuthService(ApplicationDbContext context, IConfiguration configuration, ILogger<AuthService> logger)
+    {
+        _context = context;
+        _configuration = configuration;
+        _logger = logger;
+    }
+
+    public async Task<(bool Success, string Token, string Error)> LoginAsync(string username, string password)
+    {
+        try
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Username == username && u.IsActive);
+
+            if (user == null)
+            {
+                return (false, string.Empty, "Invalid username or password");
+            }
+
+            if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+            {
+                return (false, string.Empty, "Invalid username or password");
+            }
+
+            var token = GenerateJwtToken(user);
+            return (true, token, string.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during login for user {Username}", username);
+            return (false, string.Empty, "An error occurred during login");
+        }
+    }
+
+    public async Task<(bool Success, User? User, string Error)> RegisterAsync(string username, string email, string password, string? firstName = null, string? lastName = null)
+    {
+        try
+        {
+            // Check if username already exists
+            if (await _context.Users.AnyAsync(u => u.Username == username))
+            {
+                return (false, null, "Username already exists");
+            }
+
+            // Check if email already exists
+            if (await _context.Users.AnyAsync(u => u.Email == email))
+            {
+                return (false, null, "Email already registered");
+            }
+
+            // Create new user
+            var user = new User
+            {
+                Username = username,
+                Email = email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+                FirstName = firstName,
+                LastName = lastName,
+                IsActive = true
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            return (true, user, string.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during registration for user {Username}", username);
+            return (false, null, "An error occurred during registration");
+        }
+    }
+
+    public async Task<User?> GetUserByUsernameAsync(string username)
+    {
+        return await _context.Users
+            .FirstOrDefaultAsync(u => u.Username == username && u.IsActive);
+    }
+
+    public string GenerateJwtToken(User user)
+    {
+        var jwtSettings = _configuration.GetSection("JwtSettings");
+        var key = Encoding.ASCII.GetBytes(jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret not configured"));
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(ClaimTypes.Email, user.Email)
+            }),
+            Expires = DateTime.UtcNow.AddDays(7),
+            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
+            Issuer = jwtSettings["Issuer"],
+            Audience = jwtSettings["Audience"]
+        };
+
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        return tokenHandler.WriteToken(token);
+    }
+}
