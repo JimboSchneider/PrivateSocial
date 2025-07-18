@@ -11,8 +11,8 @@ var apiService = builder.AddProject<Projects.PrivateSocial_ApiService>("apiservi
     .WithReference(mysql)
     .WaitFor(mysql);
 
-builder.AddNpmApp("webfrontend", "../PrivateSocial.Web.React", "dev")
-    .WithHttpEndpoint(targetPort: 3000)
+builder.AddDockerfile("webfrontend", "../PrivateSocial.Web.React")
+    .WithHttpEndpoint(targetPort: 80, name: "http")
     .WithExternalHttpEndpoints()
     .WithReference(apiService)
     .WaitFor(apiService);

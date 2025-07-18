@@ -22,8 +22,9 @@ dotnet run --project PrivateSocial.AppHost
 # This launches:
 # - Aspire Dashboard: https://localhost:17253
 # - Redis container
+# - MySQL container with database
 # - API Service
-# - Web Frontend
+# - Web Frontend (Docker container with nginx)
 ```
 
 ### Build
@@ -79,10 +80,13 @@ cd PrivateSocial.Web.React && npm run lint
 - **Observability**: OpenTelemetry for distributed tracing, metrics, and logging
 
 ### Inter-Service Communication
-- Web frontend calls API service using `WeatherApiClient` with service discovery
-- Services registered in AppHost using `.AddProject<T>()` pattern
-- Redis registered as container using `.AddRedis()`
-- MySQL registered as container using `.AddMySql()` with database
+- Web frontend calls API service via nginx proxy (/api/* routes)
+- Services registered in AppHost:
+  - API service: `.AddProject<T>()` pattern
+  - Redis: `.AddRedis()` as container
+  - MySQL: `.AddMySql()` as container with database
+  - Web frontend: `.AddDockerfile()` for containerized React app
+- Service discovery handled by Aspire's environment variables
 
 ### Frontend Architecture
 - React + TypeScript with Vite bundler
@@ -95,6 +99,11 @@ cd PrivateSocial.Web.React && npm run lint
 - Styles organized in src/styles/
 - JWT token stored in localStorage
 - Axios for HTTP requests with auth interceptor
+- **Containerized with Docker**:
+  - Multi-stage build (Node.js for building, nginx for serving)
+  - Nginx configured to proxy /api/* requests to backend service
+  - Dynamic service discovery via Aspire environment variables
+  - Production-optimized with caching and compression
 
 ### API Architecture
 - Controller-based architecture with BaseApiController
@@ -146,3 +155,25 @@ cd PrivateSocial.Web.React && npm run lint
 - Use Aspire testing framework for integration tests
 - Test distributed scenarios with `DistributedApplicationTestingBuilder`
 - HttpClient available for API testing in test context
+
+## Docker Configuration
+
+### React Frontend Container
+The React application is containerized for production deployment:
+
+**Dockerfile Features:**
+- Multi-stage build for optimized image size
+- Node.js Alpine for building, nginx Alpine for serving
+- Static assets served by nginx with caching headers
+- API proxy configuration for backend communication
+
+**Key Files:**
+- `PrivateSocial.Web.React/Dockerfile` - Multi-stage Docker build
+- `PrivateSocial.Web.React/nginx.conf` - Nginx configuration with API proxy
+- `PrivateSocial.Web.React/docker-entrypoint.sh` - Dynamic service discovery setup
+- `PrivateSocial.Web.React/.dockerignore` - Excludes unnecessary files
+
+**API Proxy Configuration:**
+- All `/api/*` requests are proxied to the backend service
+- Service URL is dynamically configured via Aspire environment variables
+- Proper headers for WebSocket support and forwarding client information

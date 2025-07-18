@@ -46,3 +46,4 @@ dist-ssr/
 apphost.log
 
 aspire.log
+.azure
