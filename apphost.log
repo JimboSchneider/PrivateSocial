@@ -1,0 +1,16 @@
+Using launch settings from PrivateSocial.AppHost/Properties/launchSettings.json...
+Building...
+/Users/jimschneider/Documents/repos/PrivateSocial/PrivateSocial.ApiService/PrivateSocial.ApiService.csproj : warning NU1603: PrivateSocial.ApiService depends on System.IdentityModel.Tokens.Jwt (>= 8.3.2) but System.IdentityModel.Tokens.Jwt 8.3.2 was not found. System.IdentityModel.Tokens.Jwt 8.4.0 was resolved instead. [/Users/jimschneider/Documents/repos/PrivateSocial/PrivateSocial.AppHost/PrivateSocial.AppHost.csproj]
+/Users/jimschneider/Documents/repos/PrivateSocial/PrivateSocial.ApiService/PrivateSocial.ApiService.csproj : warning NU1603: PrivateSocial.ApiService depends on System.IdentityModel.Tokens.Jwt (>= 8.3.2) but System.IdentityModel.Tokens.Jwt 8.3.2 was not found. System.IdentityModel.Tokens.Jwt 8.4.0 was resolved instead.
+info: Aspire.Hosting.DistributedApplication[0]
+      Aspire version: 9.3.0+f76a033601ade4a17a422d5d1e4d004ab85e5179
+info: Aspire.Hosting.DistributedApplication[0]
+      Distributed application starting.
+info: Aspire.Hosting.DistributedApplication[0]
+      Application host directory is: /Users/jimschneider/Documents/repos/PrivateSocial/PrivateSocial.AppHost
+info: Aspire.Hosting.DistributedApplication[0]
+      Now listening on: https://localhost:17253
+info: Aspire.Hosting.DistributedApplication[0]
+      Login to the dashboard at https://localhost:17253/login?t=7c48afd60a44dfd6e405975bb7e31041
+info: Aspire.Hosting.DistributedApplication[0]
+      Distributed application started. Press Ctrl+C to shut down.

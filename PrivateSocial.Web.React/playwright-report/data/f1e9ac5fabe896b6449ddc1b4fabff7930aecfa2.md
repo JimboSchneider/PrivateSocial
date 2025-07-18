@@ -1,0 +1,28 @@
+# Page snapshot
+
+```yaml
+- link "PrivateSocial":
+  - /url: ""
+- navigation:
+  - link "Home":
+    - /url: /
+  - link "Counter":
+    - /url: /counter
+  - link "Weather":
+    - /url: /weather
+  - link "Posts":
+    - /url: /posts
+  - separator
+  - text: "Logged in as: e2e_test_1751688025350_725"
+  - button "Logout"
+- main:
+  - link "About":
+    - /url: https://learn.microsoft.com/aspnet/core/
+  - article:
+    - heading "Posts" [level=1]
+    - heading "Create New Post" [level=5]
+    - textbox "What's on your mind?": aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    - text: 500/500 characters
+    - button "Post"
+    - alert: Failed to load posts. Please try again.
+```
