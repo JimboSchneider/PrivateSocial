@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PrivateSocial.ApiService.Data;
 using PrivateSocial.ApiService.Services;
@@ -119,24 +120,21 @@ app.MapControllers();
 
 app.MapDefaultEndpoints();
 
-// Apply migrations on startup (for development)
-if (app.Environment.IsDevelopment())
+// Apply migrations on startup
+try
 {
-    try
-    {
-        using var scope = app.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        
-        logger.LogInformation("Ensuring database is created...");
-        await dbContext.Database.EnsureCreatedAsync();
-        logger.LogInformation("Database created or already exists.");
-    }
-    catch (Exception ex)
-    {
-        var logger = app.Services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while creating the database.");
-    }
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    
+    logger.LogInformation("Applying database migrations...");
+    await dbContext.Database.MigrateAsync();
+    logger.LogInformation("Database migrations applied successfully.");
+}
+catch (Exception ex)
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex, "An error occurred while applying database migrations.");
 }
 
 app.Run();

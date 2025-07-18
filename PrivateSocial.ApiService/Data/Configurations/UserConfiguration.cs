@@ -41,5 +41,8 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             
         builder.HasIndex(u => u.Email)
             .IsUnique();
+            
+        // Performance index for filtering active/inactive users
+        builder.HasIndex(u => u.IsActive);
     }
 }

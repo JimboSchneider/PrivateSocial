@@ -23,5 +23,9 @@ public class PostConfiguration : IEntityTypeConfiguration<Post>
             
         builder.HasIndex(p => p.UserId);
         builder.HasIndex(p => p.CreatedAt);
+        
+        // Composite index for user's posts ordered by date (common query pattern)
+        builder.HasIndex(p => new { p.UserId, p.CreatedAt })
+            .HasDatabaseName("IX_Posts_UserId_CreatedAt");
     }
 }
