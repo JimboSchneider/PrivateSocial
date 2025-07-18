@@ -157,11 +157,22 @@ public class PostsController : BaseApiController
     /// <returns>The updated post</returns>
     [HttpPut("{id}")]
     [ProducesResponseType(typeof(PostDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdatePost(int id, [FromBody] UpdatePostRequest request)
     {
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim))
+        {
+            return Unauthorized("User ID claim is missing.");
+        }
+
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return BadRequest("Invalid User ID claim.");
+        }
         
         var post = await _context.Posts
             .Include(p => p.User)
@@ -200,11 +211,22 @@ public class PostsController : BaseApiController
     /// <returns>No content</returns>
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeletePost(int id)
     {
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim))
+        {
+            return Unauthorized("User ID claim is missing.");
+        }
+
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return BadRequest("Invalid User ID claim.");
+        }
         
         var post = await _context.Posts
             .FirstOrDefaultAsync(p => p.Id == id);
