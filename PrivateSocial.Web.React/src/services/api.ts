@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getNavigate } from './navigationHelper';
 
 const api = axios.create({
   baseURL: '/api',
@@ -31,7 +32,11 @@ api.interceptors.response.use(
       // Unauthorized - clear token and redirect to login
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      
+      const navigate = getNavigate();
+      if (navigate) {
+        navigate('/login');
+      }
     }
     return Promise.reject(error);
   }
