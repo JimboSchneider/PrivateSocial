@@ -96,7 +96,27 @@ public class AuthService : IAuthService
     public string GenerateJwtToken(User user)
     {
         var jwtSettings = _configuration.GetSection("JwtSettings");
-        var key = Encoding.ASCII.GetBytes(jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret not configured"));
+        
+        // Try to get the secret from configuration first (for local development)
+        // If not found, try to get it from the secret name (which will be loaded from Key Vault)
+        var secret = jwtSettings["Secret"];
+        if (string.IsNullOrEmpty(secret))
+        {
+            var secretName = jwtSettings["SecretName"];
+            if (!string.IsNullOrEmpty(secretName))
+            {
+                // When Key Vault is configured, the secret will be available directly in configuration
+                // using the secret name as the key
+                secret = _configuration[secretName];
+            }
+        }
+        
+        if (string.IsNullOrEmpty(secret))
+        {
+            throw new InvalidOperationException("JWT Secret not configured");
+        }
+        
+        var key = Encoding.ASCII.GetBytes(secret);
 
         var tokenHandler = new JwtSecurityTokenHandler();
         var tokenDescriptor = new SecurityTokenDescriptor

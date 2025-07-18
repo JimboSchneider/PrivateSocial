@@ -39,16 +39,6 @@ function NavMenu() {
           </NavLink>
         </div>
         <div className="nav-item px-3">
-          <NavLink className="nav-link" to="/counter">
-            <span className="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-          </NavLink>
-        </div>
-        <div className="nav-item px-3">
-          <NavLink className="nav-link" to="/weather">
-            <span className="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-          </NavLink>
-        </div>
-        <div className="nav-item px-3">
           <NavLink className="nav-link" to="/posts">
             <span className="bi bi-chat-square-text" aria-hidden="true"></span> Posts
           </NavLink>

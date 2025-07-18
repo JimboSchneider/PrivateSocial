@@ -47,3 +47,9 @@ apphost.log
 
 aspire.log
 .azure
+
+# Local configuration files
+appsettings.Local.json
+
+# Key Vault cache
+**/KeyVaultCache/

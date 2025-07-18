@@ -4,8 +4,6 @@ import MainLayout from './components/MainLayout'
 import ProtectedRoute from './components/ProtectedRoute'
 import NavigationSetup from './components/NavigationSetup'
 import Home from './pages/Home'
-import Counter from './pages/Counter'
-import Weather from './pages/Weather'
 import Error from './pages/Error'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -22,16 +20,6 @@ function App() {
               <Route index element={<Home />} />
               <Route path="login" element={<Login />} />
               <Route path="register" element={<Register />} />
-              <Route path="counter" element={
-                <ProtectedRoute>
-                  <Counter />
-                </ProtectedRoute>
-              } />
-              <Route path="weather" element={
-                <ProtectedRoute>
-                  <Weather />
-                </ProtectedRoute>
-              } />
               <Route path="posts" element={
                 <ProtectedRoute>
                   <Posts />

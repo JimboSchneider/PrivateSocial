@@ -36,7 +36,27 @@ builder.Services.AddProblemDetails();
 
 // Add Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var key = Encoding.ASCII.GetBytes(jwtSettings["Secret"] ?? "your-256-bit-secret-key-for-development-only!");
+
+// Try to get the secret from configuration first (for local development)
+// If not found, try to get it from the secret name (which will be loaded from Key Vault)
+var secret = jwtSettings["Secret"];
+if (string.IsNullOrEmpty(secret))
+{
+    var secretName = jwtSettings["SecretName"];
+    if (!string.IsNullOrEmpty(secretName))
+    {
+        // When Key Vault is configured, the secret will be available directly in configuration
+        // using the secret name as the key
+        secret = builder.Configuration[secretName];
+    }
+}
+
+if (string.IsNullOrEmpty(secret))
+{
+    secret = "your-256-bit-secret-key-for-development-only!";
+}
+
+var key = Encoding.ASCII.GetBytes(secret);
 
 builder.Services.AddAuthentication(options =>
 {
