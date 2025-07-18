@@ -27,7 +27,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onEdit, onDelete }) => {
           {isOwner && (
             <div className="dropdown">
               <button
-                className="btn btn-sm btn-link text-muted"
+                className="btn btn-sm btn-link text-muted" aria-label="Post options"
                 type="button"
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
