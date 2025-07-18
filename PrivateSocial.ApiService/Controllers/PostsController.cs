@@ -111,7 +111,16 @@ public class PostsController : BaseApiController
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreatePost([FromBody] CreatePostRequest request)
     {
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim))
+        {
+            return Unauthorized("User ID claim is missing.");
+        }
+
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return BadRequest("Invalid User ID claim.");
+        }
         
         var post = new Post
         {
