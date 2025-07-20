@@ -6,7 +6,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PrivateSocial.ServiceDefaul
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PrivateSocial.ApiService", "PrivateSocial.ApiService\PrivateSocial.ApiService.csproj", "{8BB9762E-407E-49FA-898B-0B2CDA37BE7E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PrivateSocial.Web", "PrivateSocial.Web\PrivateSocial.Web.csproj", "{2F1FB612-205B-470F-83C1-8193282BFC55}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PrivateSocial.Web.React", "PrivateSocial.Web.React\PrivateSocial.Web.React.csproj", "{2F1FB612-205B-470F-83C1-8193282BFC55}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PrivateSocial.Tests", "PrivateSocial.Tests\PrivateSocial.Tests.csproj", "{D1F20BB3-CE40-4BA9-BDE0-362E789CEB6C}"
 EndProject
