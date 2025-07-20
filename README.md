@@ -8,7 +8,7 @@ PrivateSocial is a full-stack application demonstrating:
 - Microservices architecture with .NET Aspire orchestration
 - React + TypeScript frontend with Docker containerization
 - ASP.NET Core Web API with JWT authentication
-- MySQL database with Entity Framework Core
+- SQL Server database with Entity Framework Core
 - Redis caching
 - Production-ready nginx configuration
 
@@ -19,7 +19,7 @@ PrivateSocial is a full-stack application demonstrating:
 - **Vite** - Frontend build tool
 - **Docker** - Container platform
 - **nginx** - Web server for React app
-- **MySQL** - Primary database
+- **SQL Server** - Primary database
 - **Redis** - Caching layer
 - **.NET Aspire** - Cloud-native orchestration
 
@@ -54,7 +54,7 @@ dotnet run --project PrivateSocial.AppHost
 1. **PrivateSocial.AppHost** - Orchestrates all services
 2. **PrivateSocial.ApiService** - RESTful API backend
 3. **PrivateSocial.Web.React** - Containerized React frontend
-4. **MySQL** - Database container
+4. **SQL Server** - Database container
 5. **Redis** - Cache container
 
 ### Frontend Container

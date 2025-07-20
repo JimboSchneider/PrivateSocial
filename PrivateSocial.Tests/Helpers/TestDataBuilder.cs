@@ -36,7 +36,7 @@ public class TestDataBuilder
         var id = _postIdCounter++;
         return new Post
         {
-            Id = id,
+            // Don't set Id - let EF Core generate it
             UserId = userId ?? 1,
             Content = content ?? $"Test post content {id}",
             CreatedAt = DateTime.UtcNow

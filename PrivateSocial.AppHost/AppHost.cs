@@ -2,15 +2,18 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var cache = builder.AddRedis("cache");
 
-var mysql = builder.AddMySql("mysql")
+// Get SQL Server password from configuration (with fallback for local dev)
+var sqlPassword = builder.AddParameter("sql-password", secret: true);
+
+var sqlServer = builder.AddSqlServer("sql", password: sqlPassword)
     .WithDataVolume()
     .AddDatabase("privatesocial");
 
 // Configure API service
 var apiServiceBuilder = builder.AddProject<Projects.PrivateSocial_ApiService>("apiservice")
     .WithHttpHealthCheck("/health")
-    .WithReference(mysql)
-    .WaitFor(mysql);
+    .WithReference(sqlServer)
+    .WaitFor(sqlServer);
 
 // Add Azure Key Vault configuration
 // For local development: Configure Key Vault URL in appsettings or user secrets

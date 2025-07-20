@@ -11,8 +11,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
 
-// Add MySQL with Entity Framework
-builder.AddMySqlDbContext<ApplicationDbContext>("privatesocial");
+// Add SQL Server with Entity Framework
+builder.AddSqlServerDbContext<ApplicationDbContext>("privatesocial");
 
 // Add services to the container.
 builder.Services.AddControllers()
@@ -130,6 +130,15 @@ try
     logger.LogInformation("Applying database migrations...");
     await dbContext.Database.MigrateAsync();
     logger.LogInformation("Database migrations applied successfully.");
+}
+catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Message.Contains("already exists"))
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogWarning("Database tables already exist. This typically happens when switching from EnsureCreated to Migrations.");
+    logger.LogWarning("To fix this, you can either:");
+    logger.LogWarning("1. Drop the database and let migrations recreate it");
+    logger.LogWarning("2. Add the initial migration to the __EFMigrationsHistory table manually");
+    logger.LogWarning("For development, consider running: DROP DATABASE privatesocial; then let EF recreate it.");
 }
 catch (Exception ex)
 {

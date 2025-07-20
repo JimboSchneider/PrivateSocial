@@ -1,6 +1,8 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Moq;
 using PrivateSocial.ApiService.Controllers;
 using PrivateSocial.ApiService.Data.Entities;
 using PrivateSocial.Tests.Helpers;
@@ -10,10 +12,12 @@ namespace PrivateSocial.Tests.Controllers;
 public class PostsControllerTests : ControllerTestBase
 {
     private readonly PostsController _controller;
+    private readonly ILogger<PostsController> _logger;
 
     public PostsControllerTests()
     {
-        _controller = new PostsController(Context);
+        _logger = new Mock<ILogger<PostsController>>().Object;
+        _controller = new PostsController(Context, _logger);
     }
 
     [Fact]
@@ -26,7 +30,7 @@ public class PostsControllerTests : ControllerTestBase
         var result = await _controller.GetPosts(page: 1, pageSize: 10);
 
         // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         var pagedResult = okResult.Value.Should().BeAssignableTo<PagedResult<PostDto>>().Subject;
         
         pagedResult.Items.Should().HaveCount(10);
@@ -37,7 +41,7 @@ public class PostsControllerTests : ControllerTestBase
     }
 
     [Fact]
-    public async Task GetPosts_WithUserIdFilter_ShouldReturnUserPosts()
+    public async Task GetPosts_ShouldReturnAllPostsFromAllUsers()
     {
         // Arrange
         var userId = 1;
@@ -45,14 +49,14 @@ public class PostsControllerTests : ControllerTestBase
         await SeedMultiplePostsAsync(3, userId: 2);
 
         // Act
-        var result = await _controller.GetPosts(userId: userId);
+        var result = await _controller.GetPosts(page: 1, pageSize: 20);
 
         // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         var pagedResult = okResult.Value.Should().BeAssignableTo<PagedResult<PostDto>>().Subject;
         
-        pagedResult.Items.Should().HaveCount(5);
-        pagedResult.Items.Should().OnlyContain(p => p.AuthorId == userId);
+        pagedResult.Items.Should().HaveCount(8);
+        pagedResult.TotalCount.Should().Be(8);
     }
 
     [Fact]
@@ -65,7 +69,7 @@ public class PostsControllerTests : ControllerTestBase
         var result = await _controller.GetPost(post.Id);
 
         // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         var postDto = okResult.Value.Should().BeAssignableTo<PostDto>().Subject;
         
         postDto.Id.Should().Be(post.Id);
@@ -80,7 +84,7 @@ public class PostsControllerTests : ControllerTestBase
         var result = await _controller.GetPost(999);
 
         // Assert
-        result.Result.Should().BeOfType<NotFoundResult>();
+        result.Should().BeOfType<NotFoundResult>();
     }
 
     [Fact]
@@ -96,7 +100,7 @@ public class PostsControllerTests : ControllerTestBase
         var result = await _controller.CreatePost(request);
 
         // Assert
-        var createdResult = result.Result.Should().BeOfType<CreatedAtActionResult>().Subject;
+        var createdResult = result.Should().BeOfType<CreatedAtActionResult>().Subject;
         var postDto = createdResult.Value.Should().BeAssignableTo<PostDto>().Subject;
         
         postDto.Content.Should().Be(request.Content);
@@ -119,7 +123,7 @@ public class PostsControllerTests : ControllerTestBase
         var result = await _controller.CreatePost(request);
 
         // Assert
-        var unauthorizedResult = result.Result.Should().BeOfType<UnauthorizedObjectResult>().Subject;
+        var unauthorizedResult = result.Should().BeOfType<UnauthorizedObjectResult>().Subject;
         unauthorizedResult.Value.Should().Be("User ID claim is missing.");
     }
 
@@ -235,9 +239,9 @@ public class PostsControllerTests : ControllerTestBase
     }
 
     [Theory]
-    [InlineData(null, "")]
-    [InlineData("invalid", "")]
-    public async Task CreatePost_WithInvalidUserClaim_ShouldReturnBadRequest(string? claimValue, string expectedError)
+    [InlineData(null)]
+    [InlineData("invalid")]
+    public async Task CreatePost_WithInvalidUserClaim_ShouldReturnBadRequest(string? claimValue)
     {
         // Arrange
         if (claimValue != null)
@@ -263,11 +267,11 @@ public class PostsControllerTests : ControllerTestBase
         // Assert
         if (claimValue == null)
         {
-            result.Result.Should().BeOfType<UnauthorizedObjectResult>();
+            result.Should().BeOfType<UnauthorizedObjectResult>();
         }
         else
         {
-            var badRequestResult = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+            var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
             badRequestResult.Value.Should().Be("Invalid User ID claim.");
         }
     }

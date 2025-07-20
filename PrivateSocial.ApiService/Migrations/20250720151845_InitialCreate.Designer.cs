@@ -12,7 +12,7 @@ using PrivateSocial.ApiService.Data;
 namespace PrivateSocial.ApiService.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250718060801_InitialCreate")]
+    [Migration("20250720151845_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -20,10 +20,10 @@ namespace PrivateSocial.ApiService.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.11")
-                .HasAnnotation("Relational:MaxIdentifierLength", 64);
+                .HasAnnotation("ProductVersion", "9.0.0")
+                .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
-            MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
             modelBuilder.Entity("PrivateSocial.ApiService.Data.Entities.Post", b =>
                 {
@@ -31,18 +31,18 @@ namespace PrivateSocial.ApiService.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasMaxLength(5000)
-                        .HasColumnType("varchar(5000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("UserId")
                         .HasColumnType("int");
@@ -65,47 +65,47 @@ namespace PrivateSocial.ApiService.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Bio")
                         .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("FirstName")
                         .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<string>("LastName")
                         .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("ProfilePictureUrl")
                         .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
 

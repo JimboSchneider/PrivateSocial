@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using PrivateSocial.ApiService.Data;
 using PrivateSocial.ApiService.Data.Entities;
 using PrivateSocial.Tests.Helpers;
@@ -72,18 +73,35 @@ public abstract class ControllerTestBase : IDisposable
     {
         var posts = new List<Post>();
         
-        for (int i = 0; i < count; i++)
+        // Determine which userId will be used for the posts
+        var actualUserId = userId ?? 1;
+        
+        // Ensure users exist for the posts
+        var existingUserIds = await Context.Users.Select(u => u.Id).ToListAsync();
+        
+        // Create users for each unique userId that doesn't exist
+        var userIdsToCreate = new List<int>();
+        if (!existingUserIds.Contains(actualUserId))
         {
-            var post = TestDataBuilder.CreatePost(userId: userId);
-            posts.Add(post);
+            userIdsToCreate.Add(actualUserId);
         }
         
-        // Ensure user exists
-        if (userId.HasValue && !await Context.Users.AnyAsync(u => u.Id == userId))
+        foreach (var uid in userIdsToCreate.Distinct())
         {
             var user = TestDataBuilder.CreateUser();
-            user.Id = userId.Value;
+            user.Id = uid;
             await Context.Users.AddAsync(user);
+        }
+        
+        if (userIdsToCreate.Any())
+        {
+            await Context.SaveChangesAsync();
+        }
+        
+        for (int i = 0; i < count; i++)
+        {
+            var post = TestDataBuilder.CreatePost(userId: actualUserId);
+            posts.Add(post);
         }
         
         await Context.Posts.AddRangeAsync(posts);

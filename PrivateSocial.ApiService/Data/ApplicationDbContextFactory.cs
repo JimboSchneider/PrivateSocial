@@ -36,11 +36,10 @@ public class ApplicationDbContextFactory : IDesignTimeDbContextFactory<Applicati
                 "Please set either:" +
                 "\n1. ConnectionStrings:privatesocial in appsettings.json or user secrets" +
                 "\n2. PRIVATESOCIAL_DB_CONNECTION environment variable" +
-                "\n\nExample: Server=localhost;Port=3306;Database=privatesocial_dev;User=myuser;Password=mypassword;");
+                "\n\nExample: Server=localhost;Database=privatesocial_dev;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True");
         }
         
-        var serverVersion = new MySqlServerVersion(new Version(8, 0, 21));
-        optionsBuilder.UseMySql(connectionString, serverVersion);
+        optionsBuilder.UseSqlServer(connectionString);
 
         return new ApplicationDbContext(optionsBuilder.Options);
     }

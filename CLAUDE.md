@@ -8,7 +8,7 @@ PrivateSocial is a .NET Aspire-based distributed application using:
 - **.NET 9.0** with C#
 - **React + TypeScript** frontend with Vite bundler
 - **ASP.NET Core Web API** backend with Controller architecture
-- **MySQL** database with Entity Framework Core (Code First)
+- **SQL Server** database with Entity Framework Core (Code First)
 - **Redis** for caching
 - **xUnit v3** for testing
 
@@ -22,7 +22,7 @@ dotnet run --project PrivateSocial.AppHost
 # This launches:
 # - Aspire Dashboard: https://localhost:17253
 # - Redis container
-# - MySQL container with database
+# - SQL Server container with database
 # - API Service
 # - Web Frontend (Docker container with nginx)
 ```
@@ -84,7 +84,7 @@ cd PrivateSocial.Web.React && npm run lint
 - Services registered in AppHost:
   - API service: `.AddProject<T>()` pattern
   - Redis: `.AddRedis()` as container
-  - MySQL: `.AddMySql()` as container with database
+  - SQL Server: `.AddSqlServer()` as container with database
   - Web frontend: `.AddDockerfile()` for containerized React app
 - Service discovery handled by Aspire's environment variables
 

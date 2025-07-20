@@ -8,7 +8,6 @@ namespace PrivateSocial.ApiService.Controllers;
 /// <summary>
 /// Controller for authentication operations
 /// </summary>
-[AllowAnonymous]
 public class AuthController : BaseApiController
 {
     private readonly IAuthService _authService;
@@ -25,6 +24,7 @@ public class AuthController : BaseApiController
     /// <param name="request">Registration details</param>
     /// <returns>Authentication token and user info</returns>
     [HttpPost("register")]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<AuthResponse>> Register([FromBody] RegisterRequest request)
@@ -64,6 +64,7 @@ public class AuthController : BaseApiController
     /// <param name="request">Login credentials</param>
     /// <returns>Authentication token and user info</returns>
     [HttpPost("login")]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginRequest request)

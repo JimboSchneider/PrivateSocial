@@ -1,26 +1,31 @@
 import { vi } from 'vitest'
-import { AuthService } from '../../services/authService'
 
-export const createMockAuthService = (): jest.Mocked<AuthService> => ({
-  login: vi.fn().mockResolvedValue({ 
-    token: 'mock-token', 
-    user: { 
-      id: 1, 
-      username: 'testuser', 
-      email: 'test@example.com' 
-    } 
-  }),
-  register: vi.fn().mockResolvedValue({ 
-    success: true, 
-    message: 'Registration successful' 
-  }),
-  getUserInfo: vi.fn().mockResolvedValue({ 
-    id: 1, 
-    username: 'testuser', 
-    email: 'test@example.com' 
-  }),
+interface User {
+  id: number
+  username: string
+  email: string
+  firstName?: string
+  lastName?: string
+}
+
+interface AuthContextType {
+  user: User | null
+  token: string | null
+  login: (username: string, password: string) => Promise<void>
+  register: (username: string, email: string, password: string, firstName?: string, lastName?: string) => Promise<void>
+  logout: () => void
+  isLoading: boolean
+}
+
+export const createMockAuthContext = (): AuthContextType => ({
+  user: {
+    id: 1,
+    username: 'testuser',
+    email: 'test@example.com'
+  },
+  token: 'mock-token',
+  login: vi.fn().mockResolvedValue(undefined),
+  register: vi.fn().mockResolvedValue(undefined),
   logout: vi.fn(),
-  setAuthToken: vi.fn(),
-  getStoredToken: vi.fn().mockReturnValue('mock-token'),
-  removeStoredToken: vi.fn(),
+  isLoading: false
 })
