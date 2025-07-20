@@ -12,7 +12,19 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 // Add SQL Server with Entity Framework
-builder.AddSqlServerDbContext<ApplicationDbContext>("privatesocial");
+// Check if we have a connection string from Key Vault first
+var connectionString = builder.Configuration["DatabaseConnectionString"];
+if (!string.IsNullOrEmpty(connectionString))
+{
+    // Use connection string from Key Vault (production scenario)
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlServer(connectionString));
+}
+else
+{
+    // Use Aspire service discovery (local development with containers)
+    builder.AddSqlServerDbContext<ApplicationDbContext>("privatesocial");
+}
 
 // Add services to the container.
 builder.Services.AddControllers()
