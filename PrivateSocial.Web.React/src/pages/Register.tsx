@@ -60,114 +60,119 @@ function Register() {
   }
 
   return (
-    <div className="register-container" style={{ maxWidth: '500px', margin: '2rem auto', padding: '0 1rem' }}>
-      <h1>Register</h1>
-      
-      {error && (
-        <div className="alert alert-danger" role="alert">
-          {error}
-        </div>
-      )}
+    <div className="max-w-lg mx-auto mt-4 md:mt-8 px-4">
+      <div className="card">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6">Register</h1>
+        
+        {error && (
+          <div className="alert alert-danger" role="alert">
+            {error}
+          </div>
+        )}
 
-      <form onSubmit={handleSubmit}>
-        <div className="row">
-          <div className="col-md-6 mb-3">
-            <label htmlFor="firstName" className="form-label">First Name (optional)</label>
+        <form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label htmlFor="firstName" className="form-label">First Name (optional)</label>
+              <input
+                type="text"
+                className="form-control"
+                id="firstName"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="lastName" className="form-label">Last Name (optional)</label>
+              <input
+                type="text"
+                className="form-control"
+                id="lastName"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+            </div>
+          </div>
+
+          <div className="mb-3 md:mb-4">
+            <label htmlFor="username" className="form-label">Username *</label>
             <input
               type="text"
               className="form-control"
-              id="firstName"
-              name="firstName"
-              value={formData.firstName}
+              id="username"
+              name="username"
+              value={formData.username}
               onChange={handleChange}
+              required
               disabled={isLoading}
             />
           </div>
 
-          <div className="col-md-6 mb-3">
-            <label htmlFor="lastName" className="form-label">Last Name (optional)</label>
+          <div className="mb-3 md:mb-4">
+            <label htmlFor="email" className="form-label">Email *</label>
             <input
-              type="text"
+              type="email"
               className="form-control"
-              id="lastName"
-              name="lastName"
-              value={formData.lastName}
+              id="email"
+              name="email"
+              value={formData.email}
               onChange={handleChange}
+              required
               disabled={isLoading}
             />
           </div>
-        </div>
 
-        <div className="mb-3">
-          <label htmlFor="username" className="form-label">Username *</label>
-          <input
-            type="text"
-            className="form-control"
-            id="username"
-            name="username"
-            value={formData.username}
-            onChange={handleChange}
-            required
-            minLength={3}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 md:mb-6">
+            <div>
+              <label htmlFor="password" className="form-label">Password *</label>
+              <input
+                type="password"
+                className="form-control"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                minLength={6}
+                disabled={isLoading}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="confirmPassword" className="form-label">Confirm Password *</label>
+              <input
+                type="password"
+                className="form-control"
+                id="confirmPassword"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+                minLength={6}
+                disabled={isLoading}
+              />
+            </div>
+          </div>
+
+          <button 
+            type="submit" 
+            className="btn btn-primary w-full"
             disabled={isLoading}
-          />
-        </div>
+          >
+            {isLoading ? 'Creating Account...' : 'Register'}
+          </button>
+        </form>
 
-        <div className="mb-3">
-          <label htmlFor="email" className="form-label">Email *</label>
-          <input
-            type="email"
-            className="form-control"
-            id="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            disabled={isLoading}
-          />
-        </div>
-
-        <div className="mb-3">
-          <label htmlFor="password" className="form-label">Password *</label>
-          <input
-            type="password"
-            className="form-control"
-            id="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-            minLength={6}
-            disabled={isLoading}
-          />
-        </div>
-
-        <div className="mb-3">
-          <label htmlFor="confirmPassword" className="form-label">Confirm Password *</label>
-          <input
-            type="password"
-            className="form-control"
-            id="confirmPassword"
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            required
-            disabled={isLoading}
-          />
-        </div>
-
-        <button 
-          type="submit" 
-          className="btn btn-primary w-100"
-          disabled={isLoading}
-        >
-          {isLoading ? 'Creating account...' : 'Register'}
-        </button>
-      </form>
-
-      <p className="mt-3 text-center">
-        Already have an account? <Link to="/login">Login here</Link>
-      </p>
+        <p className="mt-4 md:mt-6 text-center text-sm md:text-base text-gray-600">
+          <span className="block md:inline">Already have an account?</span>{' '}
+          <Link to="/login" className="text-blue-500 hover:text-blue-600 font-medium block md:inline mt-1 md:mt-0">Login here</Link>
+        </p>
+      </div>
     </div>
   )
 }

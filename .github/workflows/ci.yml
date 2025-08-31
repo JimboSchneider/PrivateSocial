@@ -85,17 +85,16 @@ jobs:
     runs-on: ubuntu-latest
     
     services:
-      mysql:
-        image: mysql:8.0
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
         env:
-          MYSQL_ROOT_PASSWORD: root_password
-          MYSQL_DATABASE: privatesocial
-          MYSQL_USER: privatesocial_user
-          MYSQL_PASSWORD: privatesocial_password
+          ACCEPT_EULA: 'Y'
+          MSSQL_SA_PASSWORD: ${{ secrets.CI_SQL_PASSWORD }}
+          MSSQL_PID: 'Developer'
         ports:
-          - 3306:3306
+          - 1433:1433
         options: >-
-          --health-cmd="mysqladmin ping -h localhost"
+          --health-cmd="/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ${{ secrets.CI_SQL_PASSWORD }} -C -Q 'SELECT 1'"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
@@ -146,27 +145,24 @@ jobs:
       working-directory: ./PrivateSocial.Web.React
       run: npx playwright install --with-deps chromium
 
-    - name: Update database connection string
+    - name: Configure environment
       run: |
-        echo "Updating connection string for CI environment"
-        cat > PrivateSocial.ApiService/appsettings.CI.json << EOF
-        {
-          "ConnectionStrings": {
-            "privatesocial": "Server=localhost;Port=3306;Database=privatesocial;User=privatesocial_user;Password=privatesocial_password;",
-            "redis": "localhost:6379"
-          }
-        }
-        EOF
+        echo "Setting up environment variables for CI"
+        echo "DatabaseConnectionString=${{ secrets.CI_DATABASE_CONNECTION_STRING }}" >> $GITHUB_ENV
+        echo "JwtSecret=${{ secrets.CI_JWT_SECRET }}" >> $GITHUB_ENV
 
     - name: Start API Service
       run: |
         cd PrivateSocial.ApiService
-        nohup dotnet run --environment CI &
+        nohup dotnet run &
         echo $! > api.pid
         sleep 15
       env:
-        ASPNETCORE_ENVIRONMENT: CI
+        ASPNETCORE_ENVIRONMENT: Development
         ASPNETCORE_URLS: "http://localhost:5475"
+        DatabaseConnectionString: ${{ secrets.CI_DATABASE_CONNECTION_STRING }}
+        JwtSecret: ${{ secrets.CI_JWT_SECRET }}
+        ConnectionStrings__redis: "localhost:6379"
 
     - name: Wait for API to be ready
       run: |

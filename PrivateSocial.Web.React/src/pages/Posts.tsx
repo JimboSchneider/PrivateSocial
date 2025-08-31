@@ -56,16 +56,14 @@ const Posts: React.FC = () => {
   };
 
   return (
-    <div className="container mt-4">
-      <h1 className="mb-4">Posts</h1>
+    <div className="w-full">
+      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">Posts</h1>
       
       <CreatePostForm onPostCreated={handlePostCreated} />
       
       {loading && (
-        <div className="text-center my-4">
-          <div className="spinner-border" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
+        <div className="flex justify-center py-6 md:py-8">
+          <div className="animate-spin rounded-full h-8 w-8 md:h-10 md:w-10 border-b-2 border-blue-500"></div>
         </div>
       )}
       
@@ -83,7 +81,7 @@ const Posts: React.FC = () => {
       
       {!loading && !error && posts.length > 0 && (
         <>
-          <div className="posts-list">
+          <div className="space-y-4 md:space-y-6">
             {posts.map(post => (
               <PostCard
                 key={post.id}
@@ -95,11 +93,15 @@ const Posts: React.FC = () => {
           </div>
           
           {totalPages > 1 && (
-            <nav aria-label="Posts pagination" className="mt-4">
-              <ul className="pagination justify-content-center">
-                <li className={`page-item ${page === 1 ? 'disabled' : ''}`}>
+            <nav aria-label="Posts pagination" className="mt-6 md:mt-8">
+              <ul className="flex justify-center items-center space-x-1 md:space-x-2">
+                <li>
                   <button
-                    className="page-link"
+                    className={`px-2 md:px-3 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-medium transition-colors ${
+                      page === 1 
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                    }`}
                     onClick={() => setPage(page - 1)}
                     disabled={page === 1}
                   >

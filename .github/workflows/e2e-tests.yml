@@ -17,17 +17,16 @@ jobs:
     runs-on: ubuntu-latest
     
     services:
-      mysql:
-        image: mysql:8.0
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
         env:
-          MYSQL_ROOT_PASSWORD: root_password
-          MYSQL_DATABASE: privatesocial
-          MYSQL_USER: privatesocial_user
-          MYSQL_PASSWORD: privatesocial_password
+          ACCEPT_EULA: 'Y'
+          MSSQL_SA_PASSWORD: ${{ secrets.CI_SQL_PASSWORD }}
+          MSSQL_PID: 'Developer'
         ports:
-          - 3306:3306
+          - 1433:1433
         options: >-
-          --health-cmd="mysqladmin ping -h localhost"
+          --health-cmd="/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ${{ secrets.CI_SQL_PASSWORD }} -C -Q 'SELECT 1'"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5

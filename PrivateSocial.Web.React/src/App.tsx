@@ -8,7 +8,6 @@ import Error from './pages/Error'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Posts from './pages/Posts'
-import './styles/App.css'
 
 function App() {
   return (

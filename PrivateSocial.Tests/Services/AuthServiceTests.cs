@@ -52,7 +52,7 @@ public class AuthServiceTests : IDisposable
         result.Error.Should().BeEmpty();
 
         // Verify user was saved to database
-        var savedUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+        var savedUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == username, cancellationToken: TestContext.Current.CancellationToken);
         savedUser.Should().NotBeNull();
         BCrypt.Net.BCrypt.Verify(password, savedUser!.PasswordHash).Should().BeTrue();
     }

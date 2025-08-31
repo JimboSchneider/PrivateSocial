@@ -108,7 +108,7 @@ public class PostsControllerTests : ControllerTestBase
         postDto.AuthorName.Should().Be(user.Username);
 
         // Verify post was saved
-        var savedPost = await Context.Posts.FirstOrDefaultAsync(p => p.Id == postDto.Id);
+        var savedPost = await Context.Posts.FirstOrDefaultAsync(p => p.Id == postDto.Id, cancellationToken: TestContext.Current.CancellationToken);
         savedPost.Should().NotBeNull();
     }
 
@@ -147,7 +147,7 @@ public class PostsControllerTests : ControllerTestBase
         postDto.Content.Should().Be(request.Content);
 
         // Verify post was updated
-        var updatedPost = await Context.Posts.FindAsync(post.Id);
+        var updatedPost = await Context.Posts.FindAsync(new object?[] { post.Id }, TestContext.Current.CancellationToken);
         updatedPost!.Content.Should().Be(request.Content);
     }
 
@@ -199,7 +199,7 @@ public class PostsControllerTests : ControllerTestBase
         result.Should().BeOfType<NoContentResult>();
 
         // Verify post was deleted
-        var deletedPost = await Context.Posts.FindAsync(post.Id);
+        var deletedPost = await Context.Posts.FindAsync(new object?[] { post.Id }, TestContext.Current.CancellationToken);
         deletedPost.Should().BeNull();
     }
 
@@ -220,7 +220,7 @@ public class PostsControllerTests : ControllerTestBase
         result.Should().BeOfType<ForbidResult>();
 
         // Verify post was not deleted
-        var existingPost = await Context.Posts.FindAsync(post.Id);
+        var existingPost = await Context.Posts.FindAsync(new object?[] { post.Id }, TestContext.Current.CancellationToken);
         existingPost.Should().NotBeNull();
     }
 
