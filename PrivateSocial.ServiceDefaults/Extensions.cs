@@ -7,6 +7,7 @@ using Microsoft.Extensions.ServiceDiscovery;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using PrivateSocial.ServiceDefaults.Extensions;
 
 namespace Microsoft.Extensions.Hosting;
 
@@ -23,6 +24,8 @@ public static class Extensions
         builder.ConfigureOpenTelemetry();
 
         builder.AddDefaultHealthChecks();
+        
+        builder.AddAzureKeyVault();
 
         builder.Services.AddServiceDiscovery();
 

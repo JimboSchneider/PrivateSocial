@@ -1,0 +1,230 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  NODE_VERSION: '20.x'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: PrivateSocial.Web.React/package-lock.json
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Restore .NET dependencies
+      run: dotnet restore
+
+    - name: Build .NET solution
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Run .NET tests
+      run: dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+
+    - name: Upload .NET test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: dotnet-test-results
+        path: '**/TestResults/*.trx'
+        retention-days: 7
+
+    - name: Install Node dependencies
+      working-directory: ./PrivateSocial.Web.React
+      run: npm ci
+
+    - name: Lint React code
+      working-directory: ./PrivateSocial.Web.React
+      run: npm run lint
+
+    - name: Build React app
+      working-directory: ./PrivateSocial.Web.React
+      run: npm run build
+
+    - name: Upload React build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: react-build
+        path: PrivateSocial.Web.React/dist/
+        retention-days: 7
+
+  e2e-tests:
+    name: E2E Tests
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_SA_PASSWORD: ${{ secrets.CI_SQL_PASSWORD }}
+          MSSQL_PID: 'Developer'
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd="/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ${{ secrets.CI_SQL_PASSWORD }} -C -Q 'SELECT 1'"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: PrivateSocial.Web.React/package-lock.json
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Restore dependencies
+      run: |
+        dotnet restore
+        cd PrivateSocial.Web.React && npm ci
+
+    - name: Build solution
+      run: dotnet build --no-restore
+
+    - name: Install Playwright browsers
+      working-directory: ./PrivateSocial.Web.React
+      run: npx playwright install --with-deps chromium
+
+    - name: Configure environment
+      run: |
+        echo "Setting up environment variables for CI"
+        echo "DatabaseConnectionString=${{ secrets.CI_DATABASE_CONNECTION_STRING }}" >> $GITHUB_ENV
+        echo "JwtSecret=${{ secrets.CI_JWT_SECRET }}" >> $GITHUB_ENV
+
+    - name: Start API Service
+      run: |
+        cd PrivateSocial.ApiService
+        nohup dotnet run &
+        echo $! > api.pid
+        sleep 15
+      env:
+        ASPNETCORE_ENVIRONMENT: Development
+        ASPNETCORE_URLS: "http://localhost:5475"
+        DatabaseConnectionString: ${{ secrets.CI_DATABASE_CONNECTION_STRING }}
+        JwtSecret: ${{ secrets.CI_JWT_SECRET }}
+        ConnectionStrings__redis: "localhost:6379"
+
+    - name: Wait for API to be ready
+      run: |
+        echo "Waiting for API to be ready..."
+        timeout 60 bash -c 'until curl -f http://localhost:5475/health; do sleep 2; done'
+
+    - name: Run E2E tests
+      working-directory: ./PrivateSocial.Web.React
+      run: npm run test:e2e -- --project=chromium
+      env:
+        CI: true
+
+    - name: Stop API Service
+      if: always()
+      run: |
+        if [ -f PrivateSocial.ApiService/api.pid ]; then
+          kill $(cat PrivateSocial.ApiService/api.pid) || true
+        fi
+
+    - name: Upload E2E test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-test-results
+        path: |
+          PrivateSocial.Web.React/playwright-report/
+          PrivateSocial.Web.React/test-results/
+        retention-days: 30
+
+  publish:
+    name: Publish Artifacts
+    needs: [build-and-test, e2e-tests]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Publish API Service
+      run: dotnet publish PrivateSocial.ApiService/PrivateSocial.ApiService.csproj -c Release -o ./publish/api
+
+    - name: Publish AppHost
+      run: dotnet publish PrivateSocial.AppHost/PrivateSocial.AppHost.csproj -c Release -o ./publish/apphost
+
+    - name: Download React build
+      uses: actions/download-artifact@v4
+      with:
+        name: react-build
+        path: ./publish/web
+
+    - name: Upload published artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: published-app
+        path: ./publish/
+        retention-days: 30
