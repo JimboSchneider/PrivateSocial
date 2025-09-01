@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import NavMenu from './NavMenu'
-import { ErrorBoundary } from 'react-error-boundary'
-import ErrorFallback from './ErrorFallback'
 
 function MainLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -44,9 +42,7 @@ function MainLayout() {
         </div>
 
         <article className="content flex-1 overflow-y-auto">
-          <ErrorBoundary FallbackComponent={ErrorFallback}>
-            <Outlet />
-          </ErrorBoundary>
+          <Outlet />
         </article>
       </main>
     </div>

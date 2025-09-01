@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { postsService, Post, PagedResult } from '../services/postsService';
 import CreatePostForm from '../components/CreatePostForm';
 import PostCard from '../components/PostCard';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const Posts: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -62,9 +63,7 @@ const Posts: React.FC = () => {
       <CreatePostForm onPostCreated={handlePostCreated} />
       
       {loading && (
-        <div className="flex justify-center py-6 md:py-8">
-          <div className="animate-spin rounded-full h-8 w-8 md:h-10 md:w-10 border-b-2 border-blue-500"></div>
-        </div>
+        <LoadingSpinner size="large" message="Loading posts..." />
       )}
       
       {error && (
@@ -117,13 +116,15 @@ const Posts: React.FC = () => {
                     (pageNumber >= page - 2 && pageNumber <= page + 2)
                   ) {
                     return (
-                      <li
-                        key={pageNumber}
-                        className={`page-item ${pageNumber === page ? 'active' : ''}`}
-                      >
+                      <li key={pageNumber}>
                         <button
-                          className="page-link"
+                          className={`px-2 md:px-3 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-medium transition-colors ${
+                            pageNumber === page
+                              ? 'bg-blue-500 text-white cursor-default'
+                              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                          }`}
                           onClick={() => setPage(pageNumber)}
+                          disabled={pageNumber === page}
                         >
                           {pageNumber}
                         </button>
@@ -134,17 +135,21 @@ const Posts: React.FC = () => {
                     pageNumber === page + 3
                   ) {
                     return (
-                      <li key={pageNumber} className="page-item disabled">
-                        <span className="page-link">...</span>
+                      <li key={pageNumber}>
+                        <span className="px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm text-gray-400">...</span>
                       </li>
                     );
                   }
                   return null;
                 })}
                 
-                <li className={`page-item ${page === totalPages ? 'disabled' : ''}`}>
+                <li>
                   <button
-                    className="page-link"
+                    className={`px-2 md:px-3 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-medium transition-colors ${
+                      page === totalPages
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                    }`}
                     onClick={() => setPage(page + 1)}
                     disabled={page === totalPages}
                   >
