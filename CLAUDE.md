@@ -113,13 +113,13 @@ cd PrivateSocial.Web.React && npm run lint
 - Controllers in Controllers/ folder
   - AuthController - Registration, login, and user info
   - UsersController - User CRUD operations (protected)
-  - WeatherForecastController - Example with database
+  - PostsController - Social posts CRUD operations (protected)
 - Models in Models/ folder
 - Services in Services/ folder
   - IAuthService/AuthService - Authentication logic
 - Data layer with Entity Framework Core:
   - Data/ApplicationDbContext.cs - Main DbContext
-  - Data/Entities/ - Entity models (User, Post, WeatherForecastEntity)
+  - Data/Entities/ - Entity models (User, Post)
   - Data/Configurations/ - EF Core entity configurations
 
 ## Development Guidelines
@@ -155,6 +155,23 @@ cd PrivateSocial.Web.React && npm run lint
 - Use Aspire testing framework for integration tests
 - Test distributed scenarios with `DistributedApplicationTestingBuilder`
 - HttpClient available for API testing in test context
+- **Test Structure**:
+  - Controllers/ - Controller tests with mocked dependencies
+    - AuthControllerTests.cs - Tests for authentication endpoints
+    - UsersControllerTests.cs - Tests for user management endpoints
+    - PostsControllerTests.cs - Tests for social posts endpoints
+    - ControllerTestBase.cs - Base class with common test setup
+  - Services/ - Service tests with in-memory database
+    - AuthServiceTests.cs - Tests for authentication service logic
+  - Helpers/ - Test utilities
+    - TestDbContextFactory.cs - Creates in-memory database contexts
+    - TestConfigurationBuilder.cs - Provides test configuration
+    - TestDataBuilder.cs - Creates test data objects
+- **Testing Tools**:
+  - xUnit v3 - Test framework
+  - FluentAssertions - Readable assertions
+  - Moq - Mocking framework
+  - Entity Framework InMemory - In-memory database for tests
 
 ## Docker Configuration
 

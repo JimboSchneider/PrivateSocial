@@ -11,19 +11,21 @@ public class TestDataBuilder
         string? username = null,
         string? email = null,
         string? password = null,
+        string? firstName = null,
+        string? lastName = null,
         bool isActive = true)
     {
         var id = _userIdCounter++;
         return new User
         {
-            Id = id,
+            // Don't set Id - let EF Core generate it in most cases
             Username = username ?? $"testuser{id}",
             Email = email ?? $"test{id}@example.com",
             PasswordHash = password != null 
                 ? BCrypt.Net.BCrypt.HashPassword(password) 
                 : BCrypt.Net.BCrypt.HashPassword("Test123!"),
-            FirstName = "Test",
-            LastName = "User",
+            FirstName = firstName ?? "Test",
+            LastName = lastName ?? "User",
             IsActive = isActive,
             CreatedAt = DateTime.UtcNow
         };

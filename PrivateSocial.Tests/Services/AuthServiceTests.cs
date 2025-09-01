@@ -102,6 +102,9 @@ public class AuthServiceTests : IDisposable
         var password = "Test123!";
         var user = TestDataBuilder.CreateUser(password: password);
         await SeedUser(user);
+        
+        // Get the saved user with generated Id
+        var savedUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == user.Username);
 
         // Act
         var result = await _authService.LoginAsync(user.Username, password);
@@ -112,7 +115,7 @@ public class AuthServiceTests : IDisposable
         result.Error.Should().BeEmpty();
 
         // Verify token is valid
-        VerifyTokenClaims(result.Token, user);
+        VerifyTokenClaims(result.Token, savedUser!);
     }
 
     [Fact]
@@ -188,6 +191,7 @@ public class AuthServiceTests : IDisposable
     {
         // Arrange
         var user = TestDataBuilder.CreateUser();
+        user.Id = 1; // Set an ID for the token generation test
 
         // Act
         var token = _authService.GenerateJwtToken(user);
@@ -200,6 +204,8 @@ public class AuthServiceTests : IDisposable
     // Helper methods
     private async Task SeedUser(User user)
     {
+        // Let EF Core generate the ID
+        user.Id = 0;
         await _context.Users.AddAsync(user);
         await _context.SaveChangesAsync();
     }

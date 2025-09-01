@@ -47,6 +47,8 @@ public abstract class ControllerTestBase : IDisposable
     protected async Task<User> SeedUserAsync(User? user = null)
     {
         user ??= TestDataBuilder.CreateUser();
+        // Let EF Core generate the ID
+        user.Id = 0;
         await Context.Users.AddAsync(user);
         await Context.SaveChangesAsync();
         return user;
