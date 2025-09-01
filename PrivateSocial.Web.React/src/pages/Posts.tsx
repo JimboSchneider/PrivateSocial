@@ -1,60 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import { postsService, Post, PagedResult } from '../services/postsService';
+import React, { useCallback } from 'react';
+import { Post } from '../services/postsService';
+import { usePosts } from '../hooks/usePosts';
 import CreatePostForm from '../components/CreatePostForm';
 import PostCard from '../components/PostCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 
+/**
+ * Posts page component using custom hooks and optimized rendering
+ * Implements proper error handling, loading states, and pagination
+ */
 const Posts: React.FC = () => {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const {
+    posts,
+    loading,
+    error,
+    page,
+    totalPages,
+    setPage,
+    refresh,
+    deletePost
+  } = usePosts(20);
 
-  useEffect(() => {
-    loadPosts();
-  }, [page, refreshKey]);
+  /**
+   * Handle post creation - refresh the list
+   */
+  const handlePostCreated = useCallback(() => {
+    refresh();
+  }, [refresh]);
 
-  const loadPosts = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const result: PagedResult<Post> = await postsService.getPosts(page, 20);
-      setPosts(result.items);
-      setTotalPages(result.totalPages);
-    } catch (err) {
-      setError('Failed to load posts. Please try again.');
-      console.error('Error loading posts:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePostCreated = () => {
-    setPage(1);
-    setRefreshKey(prev => prev + 1);
-  };
-
-  const handleDeletePost = async (postId: number) => {
+  /**
+   * Handle post deletion with confirmation
+   */
+  const handleDeletePost = useCallback(async (postId: number) => {
     if (!window.confirm('Are you sure you want to delete this post?')) {
       return;
     }
 
-    try {
-      await postsService.deletePost(postId);
-      setRefreshKey(prev => prev + 1);
-    } catch (err) {
+    const success = await deletePost(postId);
+    if (!success) {
       alert('Failed to delete post. Please try again.');
-      console.error('Error deleting post:', err);
     }
-  };
+  }, [deletePost]);
 
-  const handleEditPost = (post: Post) => {
+  /**
+   * Handle post editing (placeholder for future implementation)
+   */
+  const handleEditPost = useCallback((post: Post) => {
     // TODO: Implement edit functionality
     console.log('Edit post:', post);
-  };
+  }, []);
 
   return (
     <div className="w-full">
@@ -68,7 +62,7 @@ const Posts: React.FC = () => {
       
       {error && (
         <div className="alert alert-danger" role="alert">
-          {error}
+          {error.message}
         </div>
       )}
       
@@ -91,9 +85,10 @@ const Posts: React.FC = () => {
             ))}
           </div>
           
+          {/* Pagination */}
           {totalPages > 1 && (
             <nav aria-label="Posts pagination" className="mt-6 md:mt-8">
-              <ul className="flex justify-center items-center space-x-1 md:space-x-2">
+              <ul className="flex justify-center items-center gap-1 md:gap-2">
                 <li>
                   <button
                     className={`px-2 md:px-3 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-medium transition-colors ${
@@ -103,6 +98,7 @@ const Posts: React.FC = () => {
                     }`}
                     onClick={() => setPage(page - 1)}
                     disabled={page === 1}
+                    aria-label="Previous page"
                   >
                     Previous
                   </button>
@@ -125,6 +121,8 @@ const Posts: React.FC = () => {
                           }`}
                           onClick={() => setPage(pageNumber)}
                           disabled={pageNumber === page}
+                          aria-label={`Go to page ${pageNumber}`}
+                          aria-current={pageNumber === page ? 'page' : undefined}
                         >
                           {pageNumber}
                         </button>
@@ -152,6 +150,7 @@ const Posts: React.FC = () => {
                     }`}
                     onClick={() => setPage(page + 1)}
                     disabled={page === totalPages}
+                    aria-label="Next page"
                   >
                     Next
                   </button>

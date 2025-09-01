@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import { Post } from '../services/postsService';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -8,15 +8,19 @@ interface PostCardProps {
   onDelete?: (postId: number) => void;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, onEdit, onDelete }) => {
+/**
+ * PostCard component optimized with React.memo to prevent unnecessary re-renders
+ * Only re-renders when post data or callbacks change
+ */
+const PostCardComponent: React.FC<PostCardProps> = ({ post, onEdit, onDelete }) => {
   const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const isOwner = user?.id === post.authorId;
 
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString();
-  };
+  }, []);
 
   return (
     <div className="card w-full">
@@ -99,5 +103,19 @@ const PostCard: React.FC<PostCardProps> = ({ post, onEdit, onDelete }) => {
     </div>
   );
 };
+
+/**
+ * Memoized PostCard component
+ * Compares props to determine if re-render is necessary
+ */
+const PostCard = memo(PostCardComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.post.id === nextProps.post.id &&
+    prevProps.post.content === nextProps.post.content &&
+    prevProps.post.updatedAt === nextProps.post.updatedAt &&
+    prevProps.onEdit === nextProps.onEdit &&
+    prevProps.onDelete === nextProps.onDelete
+  );
+});
 
 export default PostCard;

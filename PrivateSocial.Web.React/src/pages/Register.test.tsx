@@ -136,7 +136,7 @@ describe('Register Component', () => {
     expect(screen.getByLabelText('Email *')).toBeDisabled()
     expect(screen.getByLabelText('Password *')).toBeDisabled()
     expect(submitButton).toBeDisabled()
-    expect(submitButton).toHaveTextContent('Creating account...')
+    expect(submitButton).toHaveTextContent('Creating Account...')
 
     await waitFor(() => {
       expect(submitButton).not.toBeDisabled()

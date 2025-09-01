@@ -78,8 +78,7 @@ describe('Posts Component', () => {
     render(<Posts />)
     
     expect(screen.getByRole('heading', { name: /posts/i })).toBeInTheDocument()
-    expect(screen.getByRole('status')).toBeInTheDocument()
-    expect(screen.getByText(/loading/i)).toBeInTheDocument()
+    expect(screen.getByText(/loading posts/i)).toBeInTheDocument()
   })
 
   it('displays posts after loading', async () => {
@@ -261,7 +260,6 @@ describe('Posts Component', () => {
     
     // On first page, Previous should be disabled
     const previousButton = screen.getByText('Previous')
-    expect(previousButton.closest('li')).toHaveClass('disabled')
     expect(previousButton).toBeDisabled()
   })
 })

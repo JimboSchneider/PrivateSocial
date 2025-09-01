@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import PostCard from './PostCard'
 import { Post } from '../services/postsService'
 
@@ -60,7 +61,8 @@ describe('PostCard Component', () => {
     expect(screen.queryByLabelText('Post options')).not.toBeInTheDocument()
   })
 
-  it('has dropdown with edit and delete actions for owner', () => {
+  it('has dropdown with edit and delete actions for owner', async () => {
+    const user = userEvent.setup()
     (useAuth as jest.Mock).mockReturnValue({ 
       user: { id: 1, username: 'testuser', email: 'test@example.com' } 
     })
@@ -71,12 +73,10 @@ describe('PostCard Component', () => {
     const dropdownButton = screen.getByLabelText('Post options')
     expect(dropdownButton).toBeInTheDocument()
     
-    // Since Bootstrap dropdowns require JS to work, we can at least verify
-    // the structure exists in the DOM
-    const dropdownMenu = dropdownButton.nextElementSibling
-    expect(dropdownMenu).toHaveClass('dropdown-menu')
+    // Click to open the dropdown
+    await user.click(dropdownButton)
     
-    // Verify buttons exist in the dropdown (even if not visible without Bootstrap JS)
+    // Verify buttons exist in the dropdown
     const editButton = screen.getByText('Edit')
     const deleteButton = screen.getByText('Delete')
     
@@ -121,7 +121,8 @@ describe('PostCard Component', () => {
     render(<PostCard post={postWithWhitespace} />)
     
     const contentElement = screen.getByText(/Line 1/)
-    expect(contentElement).toHaveStyle({ whiteSpace: 'pre-wrap' })
+    // Check for the Tailwind class instead of computed style
+    expect(contentElement).toHaveClass('whitespace-pre-wrap')
   })
 
   it('does not show edit button when onEdit is not provided', () => {

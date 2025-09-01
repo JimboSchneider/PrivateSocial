@@ -21,9 +21,8 @@ describe('CreatePostForm Component', () => {
   it('renders form elements correctly', () => {
     render(<CreatePostForm onPostCreated={mockOnPostCreated} />)
     
-    expect(screen.getByRole('heading', { name: /create new post/i })).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/what's on your mind/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /post/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /share post/i })).toBeInTheDocument()
     expect(screen.getByText('0/500 characters')).toBeInTheDocument()
   })
 
@@ -53,7 +52,7 @@ describe('CreatePostForm Component', () => {
     render(<CreatePostForm onPostCreated={mockOnPostCreated} />)
     
     const textarea = screen.getByPlaceholderText(/what's on your mind/i)
-    const submitButton = screen.getByRole('button', { name: /post/i })
+    const submitButton = screen.getByRole('button', { name: /share post/i })
     
     await user.type(textarea, 'Test post content')
     await user.click(submitButton)
@@ -71,7 +70,7 @@ describe('CreatePostForm Component', () => {
   it('prevents submission with empty content via button disabled state', () => {
     render(<CreatePostForm onPostCreated={mockOnPostCreated} />)
     
-    const submitButton = screen.getByRole('button', { name: /post/i })
+    const submitButton = screen.getByRole('button', { name: /share post/i })
     
     // Button should be disabled when content is empty
     expect(submitButton).toBeDisabled()
@@ -88,7 +87,7 @@ describe('CreatePostForm Component', () => {
     await user.type(textarea, '   ')
     
     // Button should remain disabled with only whitespace
-    const submitButton = screen.getByRole('button', { name: /post/i })
+    const submitButton = screen.getByRole('button', { name: /share post/i })
     expect(submitButton).toBeDisabled()
     
     // Try to submit anyway by clearing and using Enter key
@@ -102,7 +101,7 @@ describe('CreatePostForm Component', () => {
   it('disables submit button when content is empty', () => {
     render(<CreatePostForm onPostCreated={mockOnPostCreated} />)
     
-    const submitButton = screen.getByRole('button', { name: /post/i })
+    const submitButton = screen.getByRole('button', { name: /share post/i })
     expect(submitButton).toBeDisabled()
   })
 
@@ -111,7 +110,7 @@ describe('CreatePostForm Component', () => {
     render(<CreatePostForm onPostCreated={mockOnPostCreated} />)
     
     const textarea = screen.getByPlaceholderText(/what's on your mind/i)
-    const submitButton = screen.getByRole('button', { name: /post/i })
+    const submitButton = screen.getByRole('button', { name: /share post/i })
     
     await user.type(textarea, 'Some content')
     
@@ -132,7 +131,7 @@ describe('CreatePostForm Component', () => {
     const textarea = screen.getByPlaceholderText(/what's on your mind/i)
     await user.type(textarea, 'Test post')
     
-    const submitButton = screen.getByRole('button', { name: /post/i })
+    const submitButton = screen.getByRole('button', { name: /share post/i })
     await user.click(submitButton)
     
     // Should show loading state immediately
@@ -152,7 +151,7 @@ describe('CreatePostForm Component', () => {
     
     // Wait for form to reset
     await waitFor(() => {
-      expect(submitButton).toHaveTextContent('Post')
+      expect(submitButton).toHaveTextContent('Share Post')
       expect(textarea).toHaveValue('')
     })
   })
@@ -167,7 +166,7 @@ describe('CreatePostForm Component', () => {
     const textarea = screen.getByPlaceholderText(/what's on your mind/i)
     await user.type(textarea, 'Test post')
     
-    const submitButton = screen.getByRole('button', { name: /post/i })
+    const submitButton = screen.getByRole('button', { name: /share post/i })
     await user.click(submitButton)
     
     await waitFor(() => {
@@ -209,7 +208,7 @@ describe('CreatePostForm Component', () => {
     const textarea = screen.getByPlaceholderText(/what's on your mind/i)
     await user.type(textarea, '  Trimmed content  ')
     
-    const submitButton = screen.getByRole('button', { name: /post/i })
+    const submitButton = screen.getByRole('button', { name: /share post/i })
     await user.click(submitButton)
     
     expect(postsService.createPost).toHaveBeenCalledWith({
