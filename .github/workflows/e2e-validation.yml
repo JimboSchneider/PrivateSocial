@@ -1,0 +1,157 @@
+name: E2E Validation
+
+on:
+  workflow_call:
+  pull_request:
+    paths:
+      - 'PrivateSocial.Web.React/**'
+      - 'PrivateSocial.ApiService/**'
+      - '.github/workflows/e2e-validation.yml'
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  NODE_VERSION: '20.x'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+
+jobs:
+  e2e-tests:
+    name: Run E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_SA_PASSWORD: 'TestP@ssw0rd123!'
+          MSSQL_PID: 'Developer'
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd="/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P TestP@ssw0rd123! -C -Q 'SELECT 1'"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: PrivateSocial.Web.React/package-lock.json
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Restore .NET dependencies
+      run: dotnet restore
+
+    - name: Build .NET solution
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Install Node dependencies
+      working-directory: ./PrivateSocial.Web.React
+      run: npm ci
+
+    - name: Build React app
+      working-directory: ./PrivateSocial.Web.React
+      run: npm run build
+
+    - name: Install Playwright browsers
+      working-directory: ./PrivateSocial.Web.React
+      run: npx playwright install --with-deps chromium
+
+    - name: Start API Service
+      run: |
+        cd PrivateSocial.ApiService
+        nohup dotnet run --configuration Release &
+        echo $! > api.pid
+        echo "API Service started with PID: $(cat api.pid)"
+      env:
+        ASPNETCORE_ENVIRONMENT: Development
+        ASPNETCORE_URLS: "http://localhost:5475"
+        ConnectionStrings__privatesocial: "Server=localhost,1433;Database=PrivateSocial;User Id=sa;Password=TestP@ssw0rd123!;TrustServerCertificate=True"
+        ConnectionStrings__redis: "localhost:6379"
+        Jwt__Secret: "TestSecretKeyForE2ETestingPurposesOnly123456789"
+        Jwt__Issuer: "PrivateSocial"
+        Jwt__Audience: "PrivateSocialUsers"
+
+    - name: Wait for API to be ready
+      run: |
+        echo "Waiting for API to be ready..."
+        for i in {1..30}; do
+          if curl -f http://localhost:5475/health 2>/dev/null; then
+            echo "API is ready!"
+            break
+          fi
+          echo "Attempt $i: API not ready yet..."
+          sleep 2
+        done
+        curl -f http://localhost:5475/health || exit 1
+
+    - name: Run E2E tests
+      working-directory: ./PrivateSocial.Web.React
+      run: npm run test:e2e -- --project=chromium --reporter=list,html
+      env:
+        CI: true
+        PLAYWRIGHT_BASE_URL: "http://localhost:3000"
+        API_BASE_URL: "http://localhost:5475"
+
+    - name: Stop API Service
+      if: always()
+      run: |
+        if [ -f PrivateSocial.ApiService/api.pid ]; then
+          PID=$(cat PrivateSocial.ApiService/api.pid)
+          echo "Stopping API Service (PID: $PID)"
+          kill $PID || true
+          sleep 2
+          # Force kill if still running
+          kill -9 $PID 2>/dev/null || true
+        fi
+
+    - name: Upload E2E test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-test-results
+        path: |
+          PrivateSocial.Web.React/playwright-report/
+          PrivateSocial.Web.React/test-results/
+        retention-days: 30
+
+    - name: Upload screenshots on failure
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: e2e-failure-screenshots
+        path: |
+          PrivateSocial.Web.React/test-results/**/*.png
+          PrivateSocial.Web.React/test-results/**/*.webm
+        retention-days: 7

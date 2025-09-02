@@ -5,151 +5,197 @@ on:
     branches: [ main ]
     types: [ opened, synchronize, reopened ]
 
-env:
-  DOTNET_VERSION: '9.0.x'
-  NODE_VERSION: '20.x'
-  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
-  DOTNET_NOLOGO: true
-  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+concurrency:
+  group: pr-validation-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  validate-pr:
-    name: Validate PR
+  changes:
+    name: Detect Changes
     runs-on: ubuntu-latest
-    
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      e2e: ${{ steps.filter.outputs.e2e }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+    - uses: dorny/paths-filter@v3
+      id: filter
       with:
-        fetch-depth: 0  # Full history for better code analysis
+        filters: |
+          backend:
+            - '**.cs'
+            - '**.csproj'
+            - '**/appsettings*.json'
+            - '.github/workflows/backend-validation.yml'
+            - '.github/workflows/pr-validation.yml'
+          frontend:
+            - 'PrivateSocial.Web.React/**'
+            - '.github/workflows/frontend-validation.yml'
+            - '.github/workflows/pr-validation.yml'
+          e2e:
+            - 'PrivateSocial.Web.React/**'
+            - 'PrivateSocial.ApiService/**'
+            - '.github/workflows/e2e-validation.yml'
+            - '.github/workflows/pr-validation.yml'
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
+  backend:
+    name: Backend Validation
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    uses: ./.github/workflows/backend-validation.yml
+    secrets: inherit
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-        cache-dependency-path: PrivateSocial.Web.React/package-lock.json
+  frontend:
+    name: Frontend Validation
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    uses: ./.github/workflows/frontend-validation.yml
+    secrets: inherit
 
-    # Build and Test .NET
-    - name: Restore .NET dependencies
-      run: dotnet restore
+  e2e:
+    name: E2E Tests
+    needs: changes
+    if: needs.changes.outputs.e2e == 'true'
+    uses: ./.github/workflows/e2e-validation.yml
+    secrets: inherit
 
-    - name: Build .NET
-      run: dotnet build --no-restore --configuration Release
-
-    - name: Run .NET tests with coverage
+  validation-status:
+    name: PR Validation Status
+    runs-on: ubuntu-latest
+    needs: [changes, backend, frontend, e2e]
+    if: always()
+    steps:
+    - name: Check validation results
       run: |
-        dotnet test --no-build --configuration Release \
-          --collect:"XPlat Code Coverage" \
-          --logger "trx;LogFileName=test-results.trx" \
-          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+        echo "PR Validation Summary"
+        echo "====================="
+        
+        # Check if any required jobs were skipped
+        BACKEND_CHANGED="${{ needs.changes.outputs.backend }}"
+        FRONTEND_CHANGED="${{ needs.changes.outputs.frontend }}"
+        E2E_CHANGED="${{ needs.changes.outputs.e2e }}"
+        
+        # Check job results
+        BACKEND_RESULT="${{ needs.backend.result }}"
+        FRONTEND_RESULT="${{ needs.frontend.result }}"
+        E2E_RESULT="${{ needs.e2e.result }}"
+        
+        # Print status
+        if [[ "$BACKEND_CHANGED" == "true" ]]; then
+          echo "✓ Backend: $BACKEND_RESULT"
+          if [[ "$BACKEND_RESULT" != "success" && "$BACKEND_RESULT" != "skipped" ]]; then
+            echo "  ⚠️ Backend validation failed"
+          fi
+        else
+          echo "○ Backend: No changes detected"
+        fi
+        
+        if [[ "$FRONTEND_CHANGED" == "true" ]]; then
+          echo "✓ Frontend: $FRONTEND_RESULT"
+          if [[ "$FRONTEND_RESULT" != "success" && "$FRONTEND_RESULT" != "skipped" ]]; then
+            echo "  ⚠️ Frontend validation failed"
+          fi
+        else
+          echo "○ Frontend: No changes detected"
+        fi
+        
+        if [[ "$E2E_CHANGED" == "true" ]]; then
+          echo "✓ E2E Tests: $E2E_RESULT"
+          if [[ "$E2E_RESULT" != "success" && "$E2E_RESULT" != "skipped" ]]; then
+            echo "  ⚠️ E2E tests failed"
+          fi
+        else
+          echo "○ E2E Tests: No changes detected"
+        fi
+        
+        # Determine overall status
+        OVERALL_STATUS="success"
+        
+        if [[ "$BACKEND_CHANGED" == "true" && "$BACKEND_RESULT" != "success" && "$BACKEND_RESULT" != "skipped" ]]; then
+          OVERALL_STATUS="failure"
+        fi
+        
+        if [[ "$FRONTEND_CHANGED" == "true" && "$FRONTEND_RESULT" != "success" && "$FRONTEND_RESULT" != "skipped" ]]; then
+          OVERALL_STATUS="failure"
+        fi
+        
+        if [[ "$E2E_CHANGED" == "true" && "$E2E_RESULT" != "success" && "$E2E_RESULT" != "skipped" ]]; then
+          OVERALL_STATUS="failure"
+        fi
+        
+        echo ""
+        echo "Overall Status: $OVERALL_STATUS"
+        
+        if [[ "$OVERALL_STATUS" != "success" ]]; then
+          echo "❌ PR validation failed. Please check the failing jobs above."
+          exit 1
+        else
+          echo "✅ All PR validations passed!"
+        fi
 
-    - name: Generate .NET coverage report
-      uses: danielpalme/ReportGenerator-GitHub-Action@5.2.0
-      with:
-        reports: '**/coverage.opencover.xml'
-        targetdir: 'coverage-report'
-        reporttypes: 'HtmlInline;Cobertura'
-
-    # Build and Test React with Vite
-    - name: Install Node dependencies
-      working-directory: ./PrivateSocial.Web.React
-      run: npm ci
-
-    - name: Lint React code
-      working-directory: ./PrivateSocial.Web.React
-      run: npm run lint
-
-    - name: Run React tests with Vitest
-      working-directory: ./PrivateSocial.Web.React
-      run: npm run test:unit -- --run --coverage
-
-    - name: Build React app with Vite
-      working-directory: ./PrivateSocial.Web.React
-      run: npm run build
-
-    - name: Check Vite build output
-      working-directory: ./PrivateSocial.Web.React
-      run: |
-        echo "Build output size:"
-        du -sh dist/
-        echo "Files in dist:"
-        ls -la dist/
-
-    # Code Quality Checks
-    - name: Check for large files
-      run: |
-        find . -type f -size +1M -not -path "./.git/*" -not -path "./node_modules/*" -not -path "./dist/*" -not -path "./bin/*" -not -path "./obj/*" | while read file; do
-          echo "::warning file=$file::Large file detected (>1MB): $file"
-        done
-
-    - name: Check for secrets
-      uses: trufflesecurity/trufflehog@main
-      with:
-        path: ./
-        base: ${{ github.event.pull_request.base.sha }}
-        head: ${{ github.event.pull_request.head.sha }}
-
-    # Upload artifacts
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: test-results
-        path: |
-          **/TestResults/*.trx
-          **/coverage.opencover.xml
-          coverage-report/
-          PrivateSocial.Web.React/coverage/
-        retention-days: 7
-
-    - name: Upload Vite build
-      uses: actions/upload-artifact@v4
-      with:
-        name: vite-build
-        path: PrivateSocial.Web.React/dist/
-        retention-days: 7
-
-    # Comment on PR with results
-    - name: Add PR comment with test results
+    - name: Add PR comment with results
+      if: always() && github.event_name == 'pull_request'
       uses: actions/github-script@v7
-      if: github.event_name == 'pull_request'
       with:
         script: |
-          const fs = require('fs');
-          let comment = '## PR Validation Results\n\n';
+          const backend = '${{ needs.backend.result }}';
+          const frontend = '${{ needs.frontend.result }}';
+          const e2e = '${{ needs.e2e.result }}';
+          const backendChanged = '${{ needs.changes.outputs.backend }}' === 'true';
+          const frontendChanged = '${{ needs.changes.outputs.frontend }}' === 'true';
+          const e2eChanged = '${{ needs.changes.outputs.e2e }}' === 'true';
           
-          // Add build status
-          comment += '✅ Build successful\n';
-          comment += '✅ All tests passed\n';
-          comment += '✅ Linting passed\n\n';
+          const getStatusEmoji = (result, changed) => {
+            if (!changed) return '○';
+            if (result === 'success') return '✅';
+            if (result === 'failure') return '❌';
+            if (result === 'cancelled') return '⚠️';
+            return '⏳';
+          };
           
-          // Add coverage info if available
-          comment += '### Code Coverage\n';
-          comment += 'Coverage reports have been generated and uploaded as artifacts.\n\n';
+          const getStatusText = (result, changed) => {
+            if (!changed) return 'No changes';
+            if (result === 'success') return 'Passed';
+            if (result === 'failure') return 'Failed';
+            if (result === 'cancelled') return 'Cancelled';
+            return 'Pending';
+          };
           
-          // Add security reminder
-          comment += '### Security Checklist\n';
-          comment += '- [ ] No hardcoded secrets\n';
-          comment += '- [ ] Dependencies are up to date\n';
-          comment += '- [ ] SQL injection prevention verified\n';
-          comment += '- [ ] Authentication properly implemented\n\n';
+          const body = `## PR Validation Results
           
-          // Add trunk-based development reminder
-          comment += '### Trunk-Based Development\n';
-          comment += '- [ ] PR is small and focused\n';
-          comment += '- [ ] Feature flags used for incomplete features\n';
-          comment += '- [ ] No long-lived feature branches\n';
-          comment += '- [ ] Ready to merge to main within 24 hours\n';
+          | Check | Status | Result |
+          |-------|--------|--------|
+          | Backend | ${getStatusEmoji(backend, backendChanged)} | ${getStatusText(backend, backendChanged)} |
+          | Frontend | ${getStatusEmoji(frontend, frontendChanged)} | ${getStatusText(frontend, frontendChanged)} |
+          | E2E Tests | ${getStatusEmoji(e2e, e2eChanged)} | ${getStatusText(e2e, e2eChanged)} |
           
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
+          _Last updated: ${new Date().toISOString()}_`;
+          
+          // Find existing comment
+          const { data: comments } = await github.rest.issues.listComments({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: comment
+            issue_number: context.issue.number,
           });
+          
+          const botComment = comments.find(comment => 
+            comment.user.type === 'Bot' && 
+            comment.body.includes('## PR Validation Results')
+          );
+          
+          if (botComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: body
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+          }
