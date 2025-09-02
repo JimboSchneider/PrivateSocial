@@ -63,7 +63,7 @@ describe('PostCard Component', () => {
 
   it('has dropdown with edit and delete actions for owner', async () => {
     const user = userEvent.setup()
-    (useAuth as jest.Mock).mockReturnValue({ 
+    ;(useAuth as jest.Mock).mockReturnValue({ 
       user: { id: 1, username: 'testuser', email: 'test@example.com' } 
     })
     
