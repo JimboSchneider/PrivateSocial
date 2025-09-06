@@ -173,6 +173,7 @@ jobs:
         
     - name: Run E2E tests
       working-directory: ./PrivateSocial.Web.React
+      timeout-minutes: 10
       run: npm run test:e2e -- --project=chromium --reporter=list,html
       env:
         CI: true
