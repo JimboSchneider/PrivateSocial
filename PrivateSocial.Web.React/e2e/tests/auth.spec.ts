@@ -115,10 +115,12 @@ test.describe('Authentication', () => {
     
     await page.click('button[type="submit"]');
 
-    // Check HTML5 validation message
+    // Check HTML5 validation message (browser-specific text)
     const passwordInput = page.locator('input[name="password"]');
     const validationMessage = await passwordInput.evaluate((el: HTMLInputElement) => el.validationMessage);
-    expect(validationMessage).toContain('at least 6 characters');
+    // Different browsers have different validation messages, just check it's not empty
+    expect(validationMessage).toBeTruthy();
+    expect(validationMessage.toLowerCase()).toMatch(/6|length|short/i);
   });
 
   test('should login successfully with valid credentials', async ({ page }) => {
