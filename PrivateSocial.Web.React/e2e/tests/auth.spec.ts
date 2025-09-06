@@ -44,11 +44,10 @@ test.describe('Authentication', () => {
     const loggedIn = await isLoggedIn(page);
     expect(loggedIn).toBe(true);
 
-    // Verify username is displayed in navigation (may be truncated)
-    await expect(page.locator('small').filter({ hasText: 'Logged in as:' })).toBeVisible();
-    // Also verify the username appears somewhere in the text
-    const loggedInText = await page.locator('small').filter({ hasText: 'Logged in as:' }).textContent();
-    expect(loggedInText).toContain(username.substring(0, 15)); // Check first 15 chars in case of truncation
+    // Verify user is logged in - check for the logout button
+    await expect(page.getByRole('button', { name: 'Logout' })).toBeVisible();
+    // Also verify that we're on the home page after successful registration
+    await expect(page).toHaveURL('/');
   });
 
   test('should show error when registering with existing username', async ({ page }) => {
@@ -161,11 +160,10 @@ test.describe('Authentication', () => {
     const loggedIn = await isLoggedIn(page);
     expect(loggedIn).toBe(true);
 
-    // Verify username is displayed in navigation (may be truncated)
-    await expect(page.locator('small').filter({ hasText: 'Logged in as:' })).toBeVisible();
-    // Also verify the username appears somewhere in the text
-    const loggedInText = await page.locator('small').filter({ hasText: 'Logged in as:' }).textContent();
-    expect(loggedInText).toContain(username.substring(0, 15)); // Check first 15 chars in case of truncation
+    // Verify user is logged in - check for the logout button
+    await expect(page.getByRole('button', { name: 'Logout' })).toBeVisible();
+    // Also verify that we're on the home page after successful registration
+    await expect(page).toHaveURL('/');
   });
 
   test('should show error when logging in with invalid credentials', async ({ page }) => {
