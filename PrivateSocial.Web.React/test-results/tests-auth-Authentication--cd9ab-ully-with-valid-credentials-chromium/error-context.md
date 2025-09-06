@@ -26,18 +26,19 @@
     - /url: https://learn.microsoft.com/aspnet/core/
   - article:
     - heading "Register" [level=1]
+    - alert: Request failed with status code 500
     - text: First Name (optional)
     - textbox "First Name (optional)"
     - text: Last Name (optional)
     - textbox "Last Name (optional)"
     - text: Username *
-    - textbox "Username *": e2e_test_1757180210100_138
+    - textbox "Username *": e2e_test_1757180211043_198
     - text: Email *
-    - textbox "Email *": e2e_test_1757180210100_822@test.com
+    - textbox "Email *": e2e_test_1757180211043_329@test.com
     - text: Password *
-    - textbox "Password *": "12345"
+    - textbox "Password *": TestPassword123!
     - text: Confirm Password *
-    - textbox "Confirm Password *": "12345"
+    - textbox "Confirm Password *": TestPassword123!
     - button "Register"
     - paragraph:
       - text: Already have an account?
