@@ -16,6 +16,8 @@
     "test:e2e:debug": "E2E_START_SERVER=true playwright test --debug",
     "test:e2e:report": "playwright show-report",
     "test:e2e:full": "node scripts/run-e2e-tests.cjs",
+    "test:e2e:api": "./scripts/run-e2e-with-api.sh",
+    "test:e2e:aspire": "./scripts/run-e2e-aspire.sh",
     "playwright": "playwright"
   },
   "dependencies": {

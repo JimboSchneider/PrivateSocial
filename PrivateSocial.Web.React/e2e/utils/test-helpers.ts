@@ -29,7 +29,10 @@ export function generateTestPassword(): string {
  * Wait for navigation to complete
  */
 export async function waitForNavigation(page: Page, url: string) {
-  await page.waitForURL(url, { waitUntil: 'networkidle' });
+  await page.waitForURL(url, { 
+    waitUntil: 'domcontentloaded',
+    timeout: 10000 // 10 seconds timeout
+  });
 }
 
 /**

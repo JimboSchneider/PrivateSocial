@@ -5,151 +5,257 @@ on:
     branches: [ main ]
     types: [ opened, synchronize, reopened ]
 
-env:
-  DOTNET_VERSION: '9.0.x'
-  NODE_VERSION: '20.x'
-  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
-  DOTNET_NOLOGO: true
-  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  actions: read
+
+concurrency:
+  group: pr-validation-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  validate-pr:
-    name: Validate PR
+  changes:
+    name: Detect Changes
     runs-on: ubuntu-latest
-    
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      e2e: ${{ steps.filter.outputs.e2e }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+    - uses: dorny/paths-filter@v3
+      id: filter
       with:
-        fetch-depth: 0  # Full history for better code analysis
+        filters: |
+          backend:
+            - '**.cs'
+            - '**.csproj'
+            - '**/appsettings*.json'
+            - '.github/workflows/backend-validation.yml'
+            - '.github/workflows/pr-validation.yml'
+          frontend:
+            - 'PrivateSocial.Web.React/**'
+            - '.github/workflows/frontend-validation.yml'
+            - '.github/workflows/pr-validation.yml'
+          e2e:
+            - 'PrivateSocial.Web.React/**'
+            - 'PrivateSocial.ApiService/**'
+            - '.github/workflows/e2e-validation.yml'
+            - '.github/workflows/pr-validation.yml'
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
+  backend:
+    name: Backend Validation
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    uses: ./.github/workflows/backend-validation.yml
+    secrets: inherit
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-        cache-dependency-path: PrivateSocial.Web.React/package-lock.json
+  frontend:
+    name: Frontend Validation
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    uses: ./.github/workflows/frontend-validation.yml
+    secrets: inherit
 
-    # Build and Test .NET
-    - name: Restore .NET dependencies
-      run: dotnet restore
+  e2e:
+    name: E2E Tests
+    needs: changes
+    if: needs.changes.outputs.e2e == 'true'
+    uses: ./.github/workflows/e2e-validation.yml
+    secrets: inherit
 
-    - name: Build .NET
-      run: dotnet build --no-restore --configuration Release
-
-    - name: Run .NET tests with coverage
-      run: |
-        dotnet test --no-build --configuration Release \
-          --collect:"XPlat Code Coverage" \
-          --logger "trx;LogFileName=test-results.trx" \
-          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
-
-    - name: Generate .NET coverage report
-      uses: danielpalme/ReportGenerator-GitHub-Action@5.2.0
-      with:
-        reports: '**/coverage.opencover.xml'
-        targetdir: 'coverage-report'
-        reporttypes: 'HtmlInline;Cobertura'
-
-    # Build and Test React with Vite
-    - name: Install Node dependencies
-      working-directory: ./PrivateSocial.Web.React
-      run: npm ci
-
-    - name: Lint React code
-      working-directory: ./PrivateSocial.Web.React
-      run: npm run lint
-
-    - name: Run React tests with Vitest
-      working-directory: ./PrivateSocial.Web.React
-      run: npm run test:unit -- --run --coverage
-
-    - name: Build React app with Vite
-      working-directory: ./PrivateSocial.Web.React
-      run: npm run build
-
-    - name: Check Vite build output
-      working-directory: ./PrivateSocial.Web.React
-      run: |
-        echo "Build output size:"
-        du -sh dist/
-        echo "Files in dist:"
-        ls -la dist/
-
-    # Code Quality Checks
-    - name: Check for large files
-      run: |
-        find . -type f -size +1M -not -path "./.git/*" -not -path "./node_modules/*" -not -path "./dist/*" -not -path "./bin/*" -not -path "./obj/*" | while read file; do
-          echo "::warning file=$file::Large file detected (>1MB): $file"
-        done
-
-    - name: Check for secrets
-      uses: trufflesecurity/trufflehog@main
-      with:
-        path: ./
-        base: ${{ github.event.pull_request.base.sha }}
-        head: ${{ github.event.pull_request.head.sha }}
-
-    # Upload artifacts
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: test-results
-        path: |
-          **/TestResults/*.trx
-          **/coverage.opencover.xml
-          coverage-report/
-          PrivateSocial.Web.React/coverage/
-        retention-days: 7
-
-    - name: Upload Vite build
-      uses: actions/upload-artifact@v4
-      with:
-        name: vite-build
-        path: PrivateSocial.Web.React/dist/
-        retention-days: 7
-
-    # Comment on PR with results
-    - name: Add PR comment with test results
+  validation-status:
+    name: PR Validation Status
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: always()
+    steps:
+    - name: Check validation results
       uses: actions/github-script@v7
-      if: github.event_name == 'pull_request'
       with:
         script: |
-          const fs = require('fs');
-          let comment = '## PR Validation Results\n\n';
+          // Get change detection results
+          const backendChanged = '${{ needs.changes.outputs.backend }}' === 'true';
+          const frontendChanged = '${{ needs.changes.outputs.frontend }}' === 'true';
+          const e2eChanged = '${{ needs.changes.outputs.e2e }}' === 'true';
           
-          // Add build status
-          comment += '✅ Build successful\n';
-          comment += '✅ All tests passed\n';
-          comment += '✅ Linting passed\n\n';
-          
-          // Add coverage info if available
-          comment += '### Code Coverage\n';
-          comment += 'Coverage reports have been generated and uploaded as artifacts.\n\n';
-          
-          // Add security reminder
-          comment += '### Security Checklist\n';
-          comment += '- [ ] No hardcoded secrets\n';
-          comment += '- [ ] Dependencies are up to date\n';
-          comment += '- [ ] SQL injection prevention verified\n';
-          comment += '- [ ] Authentication properly implemented\n\n';
-          
-          // Add trunk-based development reminder
-          comment += '### Trunk-Based Development\n';
-          comment += '- [ ] PR is small and focused\n';
-          comment += '- [ ] Feature flags used for incomplete features\n';
-          comment += '- [ ] No long-lived feature branches\n';
-          comment += '- [ ] Ready to merge to main within 24 hours\n';
-          
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
+          // Get current workflow run jobs
+          const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: comment
+            run_id: context.runId
           });
+          
+          // Find job results
+          const backendJob = jobs.jobs.find(job => job.name === 'Backend Validation');
+          const frontendJob = jobs.jobs.find(job => job.name === 'Frontend Validation');
+          const e2eJob = jobs.jobs.find(job => job.name === 'E2E Tests');
+          
+          // Get job statuses (null if job didn't run)
+          const backendResult = backendJob ? backendJob.conclusion || backendJob.status : null;
+          const frontendResult = frontendJob ? frontendJob.conclusion || frontendJob.status : null;
+          const e2eResult = e2eJob ? e2eJob.conclusion || e2eJob.status : null;
+          
+          console.log('PR Validation Summary');
+          console.log('=====================');
+          
+          // Check backend
+          if (backendChanged) {
+            if (backendResult === 'success') {
+              console.log('✅ Backend: Passed');
+            } else if (backendResult === 'in_progress' || backendResult === 'queued') {
+              console.log('⏳ Backend: In progress');
+            } else if (backendResult) {
+              console.log(`❌ Backend: ${backendResult}`);
+            } else {
+              console.log('⏳ Backend: Waiting to run');
+            }
+          } else {
+            console.log('○ Backend: No changes detected');
+          }
+          
+          // Check frontend
+          if (frontendChanged) {
+            if (frontendResult === 'success') {
+              console.log('✅ Frontend: Passed');
+            } else if (frontendResult === 'in_progress' || frontendResult === 'queued') {
+              console.log('⏳ Frontend: In progress');
+            } else if (frontendResult) {
+              console.log(`❌ Frontend: ${frontendResult}`);
+            } else {
+              console.log('⏳ Frontend: Waiting to run');
+            }
+          } else {
+            console.log('○ Frontend: No changes detected');
+          }
+          
+          // Check E2E
+          if (e2eChanged) {
+            if (e2eResult === 'success') {
+              console.log('✅ E2E Tests: Passed');
+            } else if (e2eResult === 'in_progress' || e2eResult === 'queued') {
+              console.log('⏳ E2E Tests: In progress');
+            } else if (e2eResult) {
+              console.log(`❌ E2E Tests: ${e2eResult}`);
+            } else {
+              console.log('⏳ E2E Tests: Waiting to run');
+            }
+          } else {
+            console.log('○ E2E Tests: No changes detected');
+          }
+          
+          // Determine overall status
+          let overallStatus = 'success';
+          
+          if (backendChanged && backendResult && backendResult !== 'success' && backendResult !== 'in_progress' && backendResult !== 'queued') {
+            overallStatus = 'failure';
+          }
+          
+          if (frontendChanged && frontendResult && frontendResult !== 'success' && frontendResult !== 'in_progress' && frontendResult !== 'queued') {
+            overallStatus = 'failure';
+          }
+          
+          if (e2eChanged && e2eResult && e2eResult !== 'success' && e2eResult !== 'in_progress' && e2eResult !== 'queued') {
+            overallStatus = 'failure';
+          }
+          
+          console.log('');
+          console.log(`Overall Status: ${overallStatus}`);
+          
+          if (overallStatus !== 'success') {
+            console.log('❌ PR validation failed. Please check the failing jobs above.');
+            process.exit(1);
+          } else {
+            console.log('✅ All PR validations passed!');
+          }
+
+    - name: Add PR comment with results
+      if: always() && github.event_name == 'pull_request'
+      continue-on-error: true
+      uses: actions/github-script@v7
+      with:
+        script: |
+          try {
+            // Get change detection results
+            const backendChanged = '${{ needs.changes.outputs.backend }}' === 'true';
+            const frontendChanged = '${{ needs.changes.outputs.frontend }}' === 'true';
+            const e2eChanged = '${{ needs.changes.outputs.e2e }}' === 'true';
+            
+            // Get current workflow run jobs
+            const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId
+            });
+            
+            // Find job results
+            const backendJob = jobs.jobs.find(job => job.name === 'Backend Validation');
+            const frontendJob = jobs.jobs.find(job => job.name === 'Frontend Validation');
+            const e2eJob = jobs.jobs.find(job => job.name === 'E2E Tests');
+            
+            // Get job statuses (null if job didn't run)
+            const backend = backendJob ? backendJob.conclusion || backendJob.status : 'skipped';
+            const frontend = frontendJob ? frontendJob.conclusion || frontendJob.status : 'skipped';
+            const e2e = e2eJob ? e2eJob.conclusion || e2eJob.status : 'skipped';
+            
+            const getStatusEmoji = (result, changed) => {
+              if (!changed) return '○';
+              if (result === 'success') return '✅';
+              if (result === 'failure') return '❌';
+              if (result === 'cancelled') return '⚠️';
+              return '⏳';
+            };
+            
+            const getStatusText = (result, changed) => {
+              if (!changed) return 'No changes';
+              if (result === 'success') return 'Passed';
+              if (result === 'failure') return 'Failed';
+              if (result === 'cancelled') return 'Cancelled';
+              return 'Pending';
+            };
+            
+            const body = `## PR Validation Results
+            
+            | Check | Status | Result |
+            |-------|--------|--------|
+            | Backend | ${getStatusEmoji(backend, backendChanged)} | ${getStatusText(backend, backendChanged)} |
+            | Frontend | ${getStatusEmoji(frontend, frontendChanged)} | ${getStatusText(frontend, frontendChanged)} |
+            | E2E Tests | ${getStatusEmoji(e2e, e2eChanged)} | ${getStatusText(e2e, e2eChanged)} |
+            
+            _Last updated: ${new Date().toISOString()}_`;
+            
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('## PR Validation Results')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+            
+            console.log('✅ PR comment posted successfully');
+          } catch (error) {
+            console.log('⚠️ Failed to post PR comment:', error.message);
+            console.log('This is non-critical and does not affect the validation status.');
+          }

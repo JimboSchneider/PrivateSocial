@@ -6,7 +6,7 @@ public class WebTests
 {
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
 
-    [Fact]
+    [Fact(Skip = "Requires Docker and full Aspire infrastructure - not suitable for CI")]
     public async Task GetWebResourceRootReturnsOkStatusCode()
     {
         // Arrange
