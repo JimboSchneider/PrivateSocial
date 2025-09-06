@@ -29,7 +29,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: process.env.services__apiservice__https__0 || process.env.services__apiservice__http__0 || 'http://localhost:5475',
+        target: process.env.services__apiservice__http__0 || process.env.services__apiservice__https__0 || 'http://localhost:5475',
         changeOrigin: true,
         secure: false
       }

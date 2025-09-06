@@ -91,7 +91,8 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
     env: {
-      // Pass API service URLs to the frontend
+      // Pass API service URLs to the frontend - inherit all env vars and override specific ones
+      ...process.env,
       services__apiservice__http__0: process.env.services__apiservice__http__0 || 'http://localhost:5475',
       services__apiservice__https__0: process.env.services__apiservice__https__0 || 'http://localhost:5475',
       VITE_API_URL: process.env.VITE_API_URL || 'http://localhost:5475',
