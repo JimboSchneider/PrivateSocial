@@ -5,6 +5,12 @@ on:
     branches: [ main ]
     types: [ opened, synchronize, reopened ]
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  actions: read
+
 concurrency:
   group: pr-validation-${{ github.ref }}
   cancel-in-progress: true
@@ -167,81 +173,89 @@ jobs:
 
     - name: Add PR comment with results
       if: always() && github.event_name == 'pull_request'
+      continue-on-error: true
       uses: actions/github-script@v7
       with:
         script: |
-          // Get change detection results
-          const backendChanged = '${{ needs.changes.outputs.backend }}' === 'true';
-          const frontendChanged = '${{ needs.changes.outputs.frontend }}' === 'true';
-          const e2eChanged = '${{ needs.changes.outputs.e2e }}' === 'true';
-          
-          // Get current workflow run jobs
-          const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            run_id: context.runId
-          });
-          
-          // Find job results
-          const backendJob = jobs.jobs.find(job => job.name === 'Backend Validation');
-          const frontendJob = jobs.jobs.find(job => job.name === 'Frontend Validation');
-          const e2eJob = jobs.jobs.find(job => job.name === 'E2E Tests');
-          
-          // Get job statuses (null if job didn't run)
-          const backend = backendJob ? backendJob.conclusion || backendJob.status : 'skipped';
-          const frontend = frontendJob ? frontendJob.conclusion || frontendJob.status : 'skipped';
-          const e2e = e2eJob ? e2eJob.conclusion || e2eJob.status : 'skipped';
-          
-          const getStatusEmoji = (result, changed) => {
-            if (!changed) return '○';
-            if (result === 'success') return '✅';
-            if (result === 'failure') return '❌';
-            if (result === 'cancelled') return '⚠️';
-            return '⏳';
-          };
-          
-          const getStatusText = (result, changed) => {
-            if (!changed) return 'No changes';
-            if (result === 'success') return 'Passed';
-            if (result === 'failure') return 'Failed';
-            if (result === 'cancelled') return 'Cancelled';
-            return 'Pending';
-          };
-          
-          const body = `## PR Validation Results
-          
-          | Check | Status | Result |
-          |-------|--------|--------|
-          | Backend | ${getStatusEmoji(backend, backendChanged)} | ${getStatusText(backend, backendChanged)} |
-          | Frontend | ${getStatusEmoji(frontend, frontendChanged)} | ${getStatusText(frontend, frontendChanged)} |
-          | E2E Tests | ${getStatusEmoji(e2e, e2eChanged)} | ${getStatusText(e2e, e2eChanged)} |
-          
-          _Last updated: ${new Date().toISOString()}_`;
-          
-          // Find existing comment
-          const { data: comments } = await github.rest.issues.listComments({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: context.issue.number,
-          });
-          
-          const botComment = comments.find(comment => 
-            comment.user.type === 'Bot' && 
-            comment.body.includes('## PR Validation Results')
-          );
-          
-          if (botComment) {
-            await github.rest.issues.updateComment({
+          try {
+            // Get change detection results
+            const backendChanged = '${{ needs.changes.outputs.backend }}' === 'true';
+            const frontendChanged = '${{ needs.changes.outputs.frontend }}' === 'true';
+            const e2eChanged = '${{ needs.changes.outputs.e2e }}' === 'true';
+            
+            // Get current workflow run jobs
+            const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              comment_id: botComment.id,
-              body: body
+              run_id: context.runId
             });
-          } else {
-            await github.rest.issues.createComment({
+            
+            // Find job results
+            const backendJob = jobs.jobs.find(job => job.name === 'Backend Validation');
+            const frontendJob = jobs.jobs.find(job => job.name === 'Frontend Validation');
+            const e2eJob = jobs.jobs.find(job => job.name === 'E2E Tests');
+            
+            // Get job statuses (null if job didn't run)
+            const backend = backendJob ? backendJob.conclusion || backendJob.status : 'skipped';
+            const frontend = frontendJob ? frontendJob.conclusion || frontendJob.status : 'skipped';
+            const e2e = e2eJob ? e2eJob.conclusion || e2eJob.status : 'skipped';
+            
+            const getStatusEmoji = (result, changed) => {
+              if (!changed) return '○';
+              if (result === 'success') return '✅';
+              if (result === 'failure') return '❌';
+              if (result === 'cancelled') return '⚠️';
+              return '⏳';
+            };
+            
+            const getStatusText = (result, changed) => {
+              if (!changed) return 'No changes';
+              if (result === 'success') return 'Passed';
+              if (result === 'failure') return 'Failed';
+              if (result === 'cancelled') return 'Cancelled';
+              return 'Pending';
+            };
+            
+            const body = `## PR Validation Results
+            
+            | Check | Status | Result |
+            |-------|--------|--------|
+            | Backend | ${getStatusEmoji(backend, backendChanged)} | ${getStatusText(backend, backendChanged)} |
+            | Frontend | ${getStatusEmoji(frontend, frontendChanged)} | ${getStatusText(frontend, frontendChanged)} |
+            | E2E Tests | ${getStatusEmoji(e2e, e2eChanged)} | ${getStatusText(e2e, e2eChanged)} |
+            
+            _Last updated: ${new Date().toISOString()}_`;
+            
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: body
             });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('## PR Validation Results')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+            
+            console.log('✅ PR comment posted successfully');
+          } catch (error) {
+            console.log('⚠️ Failed to post PR comment:', error.message);
+            console.log('This is non-critical and does not affect the validation status.');
           }
