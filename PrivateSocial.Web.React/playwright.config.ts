@@ -22,6 +22,12 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
+  /* Test timeout */
+  timeout: 30 * 1000, // 30 seconds per test
+  expect: {
+    /* Timeout for expect assertions */
+    timeout: 5 * 1000, // 5 seconds
+  },
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
@@ -32,6 +38,12 @@ export default defineConfig({
 
     /* Screenshot on failure */
     screenshot: 'only-on-failure',
+    
+    /* Action timeout */
+    actionTimeout: 10 * 1000, // 10 seconds for actions like click, fill, etc.
+    
+    /* Navigation timeout */
+    navigationTimeout: 30 * 1000, // 30 seconds for page navigation
   },
 
   /* Configure projects for major browsers */
@@ -81,7 +93,9 @@ export default defineConfig({
     env: {
       // Pass API service URLs to the frontend
       services__apiservice__http__0: process.env.services__apiservice__http__0 || 'http://localhost:5475',
-      services__apiservice__https__0: process.env.services__apiservice__https__0 || 'https://localhost:7506',
+      services__apiservice__https__0: process.env.services__apiservice__https__0 || 'http://localhost:5475',
+      VITE_API_URL: process.env.VITE_API_URL || 'http://localhost:5475',
+      PORT: '3000',
     },
   } : undefined,
 });

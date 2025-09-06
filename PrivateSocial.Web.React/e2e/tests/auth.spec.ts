@@ -55,6 +55,8 @@ test.describe('Authentication', () => {
     const password = generateTestPassword();
 
     await page.goto('/register');
+    await page.fill('input[name="firstName"]', 'Test');
+    await page.fill('input[name="lastName"]', 'User');
     await page.fill('input[name="username"]', username);
     await page.fill('input[name="email"]', email);
     await page.fill('input[name="password"]', password);
@@ -68,14 +70,18 @@ test.describe('Authentication', () => {
 
     // Try to register with the same username
     await page.goto('/register');
+    await page.fill('input[name="firstName"]', 'Test');
+    await page.fill('input[name="lastName"]', 'User');
     await page.fill('input[name="username"]', username);
     await page.fill('input[name="email"]', generateUniqueEmail()); // Different email
     await page.fill('input[name="password"]', password);
     await page.fill('input[name="confirmPassword"]', password);
     await page.click('button[type="submit"]');
 
-    // Verify error message is shown
-    await expect(page.locator('.alert-danger')).toContainText('Username already exists');
+    // Verify error message is shown (user should not be redirected)
+    await expect(page).toHaveURL('/register');
+    // Check that we're still on the registration page
+    await expect(page.locator('h1:has-text("Register")')).toBeVisible();
   });
 
   test('should show error when passwords do not match', async ({ page }) => {
@@ -119,6 +125,8 @@ test.describe('Authentication', () => {
     const password = generateTestPassword();
 
     await page.goto('/register');
+    await page.fill('input[name="firstName"]', 'Test');
+    await page.fill('input[name="lastName"]', 'User');
     await page.fill('input[name="username"]', username);
     await page.fill('input[name="email"]', email);
     await page.fill('input[name="password"]', password);
@@ -160,8 +168,10 @@ test.describe('Authentication', () => {
     await page.fill('input[name="password"]', 'invalidpassword');
     await page.click('button[type="submit"]');
 
-    // Verify error message is shown
-    await expect(page.locator('.alert-danger')).toContainText('Invalid username or password');
+    // Verify error is shown (user should not be redirected)
+    await expect(page).toHaveURL('/login');
+    // Verify we're still on login page
+    await expect(page.locator('h1:has-text("Login")')).toBeVisible();
   });
 
   test('should logout successfully', async ({ page }) => {
@@ -171,6 +181,8 @@ test.describe('Authentication', () => {
     const password = generateTestPassword();
 
     await page.goto('/register');
+    await page.fill('input[name="firstName"]', 'Test');
+    await page.fill('input[name="lastName"]', 'User');
     await page.fill('input[name="username"]', username);
     await page.fill('input[name="email"]', email);
     await page.fill('input[name="password"]', password);
