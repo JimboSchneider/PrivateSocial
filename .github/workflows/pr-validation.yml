@@ -63,88 +63,134 @@ jobs:
   validation-status:
     name: PR Validation Status
     runs-on: ubuntu-latest
-    needs: [changes, backend, frontend, e2e]
+    needs: [changes]
     if: always()
     steps:
     - name: Check validation results
-      run: |
-        echo "PR Validation Summary"
-        echo "====================="
-        
-        # Check if any required jobs were skipped
-        BACKEND_CHANGED="${{ needs.changes.outputs.backend }}"
-        FRONTEND_CHANGED="${{ needs.changes.outputs.frontend }}"
-        E2E_CHANGED="${{ needs.changes.outputs.e2e }}"
-        
-        # Check job results
-        BACKEND_RESULT="${{ needs.backend.result }}"
-        FRONTEND_RESULT="${{ needs.frontend.result }}"
-        E2E_RESULT="${{ needs.e2e.result }}"
-        
-        # Print status
-        if [[ "$BACKEND_CHANGED" == "true" ]]; then
-          echo "✓ Backend: $BACKEND_RESULT"
-          if [[ "$BACKEND_RESULT" != "success" && "$BACKEND_RESULT" != "skipped" ]]; then
-            echo "  ⚠️ Backend validation failed"
-          fi
-        else
-          echo "○ Backend: No changes detected"
-        fi
-        
-        if [[ "$FRONTEND_CHANGED" == "true" ]]; then
-          echo "✓ Frontend: $FRONTEND_RESULT"
-          if [[ "$FRONTEND_RESULT" != "success" && "$FRONTEND_RESULT" != "skipped" ]]; then
-            echo "  ⚠️ Frontend validation failed"
-          fi
-        else
-          echo "○ Frontend: No changes detected"
-        fi
-        
-        if [[ "$E2E_CHANGED" == "true" ]]; then
-          echo "✓ E2E Tests: $E2E_RESULT"
-          if [[ "$E2E_RESULT" != "success" && "$E2E_RESULT" != "skipped" ]]; then
-            echo "  ⚠️ E2E tests failed"
-          fi
-        else
-          echo "○ E2E Tests: No changes detected"
-        fi
-        
-        # Determine overall status
-        OVERALL_STATUS="success"
-        
-        if [[ "$BACKEND_CHANGED" == "true" && "$BACKEND_RESULT" != "success" && "$BACKEND_RESULT" != "skipped" ]]; then
-          OVERALL_STATUS="failure"
-        fi
-        
-        if [[ "$FRONTEND_CHANGED" == "true" && "$FRONTEND_RESULT" != "success" && "$FRONTEND_RESULT" != "skipped" ]]; then
-          OVERALL_STATUS="failure"
-        fi
-        
-        if [[ "$E2E_CHANGED" == "true" && "$E2E_RESULT" != "success" && "$E2E_RESULT" != "skipped" ]]; then
-          OVERALL_STATUS="failure"
-        fi
-        
-        echo ""
-        echo "Overall Status: $OVERALL_STATUS"
-        
-        if [[ "$OVERALL_STATUS" != "success" ]]; then
-          echo "❌ PR validation failed. Please check the failing jobs above."
-          exit 1
-        else
-          echo "✅ All PR validations passed!"
-        fi
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // Get change detection results
+          const backendChanged = '${{ needs.changes.outputs.backend }}' === 'true';
+          const frontendChanged = '${{ needs.changes.outputs.frontend }}' === 'true';
+          const e2eChanged = '${{ needs.changes.outputs.e2e }}' === 'true';
+          
+          // Get current workflow run jobs
+          const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            run_id: context.runId
+          });
+          
+          // Find job results
+          const backendJob = jobs.jobs.find(job => job.name === 'Backend Validation');
+          const frontendJob = jobs.jobs.find(job => job.name === 'Frontend Validation');
+          const e2eJob = jobs.jobs.find(job => job.name === 'E2E Tests');
+          
+          // Get job statuses (null if job didn't run)
+          const backendResult = backendJob ? backendJob.conclusion || backendJob.status : null;
+          const frontendResult = frontendJob ? frontendJob.conclusion || frontendJob.status : null;
+          const e2eResult = e2eJob ? e2eJob.conclusion || e2eJob.status : null;
+          
+          console.log('PR Validation Summary');
+          console.log('=====================');
+          
+          // Check backend
+          if (backendChanged) {
+            if (backendResult === 'success') {
+              console.log('✅ Backend: Passed');
+            } else if (backendResult === 'in_progress' || backendResult === 'queued') {
+              console.log('⏳ Backend: In progress');
+            } else if (backendResult) {
+              console.log(`❌ Backend: ${backendResult}`);
+            } else {
+              console.log('⏳ Backend: Waiting to run');
+            }
+          } else {
+            console.log('○ Backend: No changes detected');
+          }
+          
+          // Check frontend
+          if (frontendChanged) {
+            if (frontendResult === 'success') {
+              console.log('✅ Frontend: Passed');
+            } else if (frontendResult === 'in_progress' || frontendResult === 'queued') {
+              console.log('⏳ Frontend: In progress');
+            } else if (frontendResult) {
+              console.log(`❌ Frontend: ${frontendResult}`);
+            } else {
+              console.log('⏳ Frontend: Waiting to run');
+            }
+          } else {
+            console.log('○ Frontend: No changes detected');
+          }
+          
+          // Check E2E
+          if (e2eChanged) {
+            if (e2eResult === 'success') {
+              console.log('✅ E2E Tests: Passed');
+            } else if (e2eResult === 'in_progress' || e2eResult === 'queued') {
+              console.log('⏳ E2E Tests: In progress');
+            } else if (e2eResult) {
+              console.log(`❌ E2E Tests: ${e2eResult}`);
+            } else {
+              console.log('⏳ E2E Tests: Waiting to run');
+            }
+          } else {
+            console.log('○ E2E Tests: No changes detected');
+          }
+          
+          // Determine overall status
+          let overallStatus = 'success';
+          
+          if (backendChanged && backendResult && backendResult !== 'success' && backendResult !== 'in_progress' && backendResult !== 'queued') {
+            overallStatus = 'failure';
+          }
+          
+          if (frontendChanged && frontendResult && frontendResult !== 'success' && frontendResult !== 'in_progress' && frontendResult !== 'queued') {
+            overallStatus = 'failure';
+          }
+          
+          if (e2eChanged && e2eResult && e2eResult !== 'success' && e2eResult !== 'in_progress' && e2eResult !== 'queued') {
+            overallStatus = 'failure';
+          }
+          
+          console.log('');
+          console.log(`Overall Status: ${overallStatus}`);
+          
+          if (overallStatus !== 'success') {
+            console.log('❌ PR validation failed. Please check the failing jobs above.');
+            process.exit(1);
+          } else {
+            console.log('✅ All PR validations passed!');
+          }
 
     - name: Add PR comment with results
       if: always() && github.event_name == 'pull_request'
       uses: actions/github-script@v7
       with:
         script: |
-          const backend = '${{ needs.backend.result }}';
-          const frontend = '${{ needs.frontend.result }}';
-          const e2e = '${{ needs.e2e.result }}';
+          // Get change detection results
           const backendChanged = '${{ needs.changes.outputs.backend }}' === 'true';
           const frontendChanged = '${{ needs.changes.outputs.frontend }}' === 'true';
           const e2eChanged = '${{ needs.changes.outputs.e2e }}' === 'true';
+          
+          // Get current workflow run jobs
+          const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            run_id: context.runId
+          });
+          
+          // Find job results
+          const backendJob = jobs.jobs.find(job => job.name === 'Backend Validation');
+          const frontendJob = jobs.jobs.find(job => job.name === 'Frontend Validation');
+          const e2eJob = jobs.jobs.find(job => job.name === 'E2E Tests');
+          
+          // Get job statuses (null if job didn't run)
+          const backend = backendJob ? backendJob.conclusion || backendJob.status : 'skipped';
+          const frontend = frontendJob ? frontendJob.conclusion || frontendJob.status : 'skipped';
+          const e2e = e2eJob ? e2eJob.conclusion || e2eJob.status : 'skipped';
           
           const getStatusEmoji = (result, changed) => {
             if (!changed) return '○';

@@ -84,16 +84,44 @@ jobs:
       working-directory: ./PrivateSocial.Web.React
       run: npm run build
 
+    - name: Cache Playwright browsers
+      uses: actions/cache@v4
+      id: playwright-cache
+      with:
+        path: |
+          ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-playwright-
+
     - name: Install Playwright browsers
       working-directory: ./PrivateSocial.Web.React
-      run: npx playwright install --with-deps chromium
+      run: |
+        if [[ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]]; then
+          echo "Installing Playwright browsers..."
+          npx playwright install --with-deps chromium
+        else
+          echo "Using cached Playwright browsers"
+          # Install only system dependencies without re-downloading browsers
+          npx playwright install-deps chromium
+        fi
 
     - name: Start API Service
       run: |
         cd PrivateSocial.ApiService
-        nohup dotnet run --configuration Release &
+        # Start the API service in the background with proper process management
+        dotnet run --configuration Release > api.log 2>&1 &
         echo $! > api.pid
-        echo "API Service started with PID: $(cat api.pid)"
+        API_PID=$(cat api.pid)
+        echo "API Service started with PID: $API_PID"
+        
+        # Verify the process is running
+        sleep 2
+        if ! ps -p $API_PID > /dev/null; then
+          echo "Failed to start API service. Log output:"
+          cat api.log
+          exit 1
+        fi
       env:
         ASPNETCORE_ENVIRONMENT: Development
         ASPNETCORE_URLS: "http://localhost:5475"
@@ -106,15 +134,36 @@ jobs:
     - name: Wait for API to be ready
       run: |
         echo "Waiting for API to be ready..."
-        for i in {1..30}; do
+        MAX_ATTEMPTS=30
+        ATTEMPT=0
+        
+        while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+          ATTEMPT=$((ATTEMPT + 1))
+          
           if curl -f http://localhost:5475/health 2>/dev/null; then
-            echo "API is ready!"
-            break
+            echo "✅ API is ready after $ATTEMPT attempts!"
+            exit 0
           fi
-          echo "Attempt $i: API not ready yet..."
+          
+          echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: API not ready yet..."
+          
+          # Check if process is still running
+          if [ -f PrivateSocial.ApiService/api.pid ]; then
+            PID=$(cat PrivateSocial.ApiService/api.pid)
+            if ! ps -p $PID > /dev/null; then
+              echo "❌ API process died. Last log output:"
+              tail -n 50 PrivateSocial.ApiService/api.log
+              exit 1
+            fi
+          fi
+          
           sleep 2
         done
-        curl -f http://localhost:5475/health || exit 1
+        
+        echo "❌ API failed to become ready after $MAX_ATTEMPTS attempts"
+        echo "Last log output:"
+        tail -n 50 PrivateSocial.ApiService/api.log
+        exit 1
 
     - name: Run E2E tests
       working-directory: ./PrivateSocial.Web.React
@@ -130,10 +179,36 @@ jobs:
         if [ -f PrivateSocial.ApiService/api.pid ]; then
           PID=$(cat PrivateSocial.ApiService/api.pid)
           echo "Stopping API Service (PID: $PID)"
-          kill $PID || true
-          sleep 2
-          # Force kill if still running
-          kill -9 $PID 2>/dev/null || true
+          
+          # Try graceful shutdown first
+          if ps -p $PID > /dev/null 2>&1; then
+            kill -TERM $PID 2>/dev/null || true
+            
+            # Wait for graceful shutdown (max 5 seconds)
+            for i in {1..5}; do
+              if ! ps -p $PID > /dev/null 2>&1; then
+                echo "✅ API Service stopped gracefully"
+                break
+              fi
+              sleep 1
+            done
+            
+            # Force kill if still running
+            if ps -p $PID > /dev/null 2>&1; then
+              echo "Force stopping API Service..."
+              kill -9 $PID 2>/dev/null || true
+            fi
+          else
+            echo "API Service already stopped"
+          fi
+          
+          # Save logs for debugging if needed
+          if [ -f PrivateSocial.ApiService/api.log ]; then
+            echo "Saving API logs..."
+            cp PrivateSocial.ApiService/api.log api-service.log || true
+          fi
+        else
+          echo "No API Service PID file found"
         fi
 
     - name: Upload E2E test results
@@ -154,4 +229,14 @@ jobs:
         path: |
           PrivateSocial.Web.React/test-results/**/*.png
           PrivateSocial.Web.React/test-results/**/*.webm
+        retention-days: 7
+
+    - name: Upload API logs on failure
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: api-service-logs
+        path: |
+          api-service.log
+          PrivateSocial.ApiService/api.log
         retention-days: 7
