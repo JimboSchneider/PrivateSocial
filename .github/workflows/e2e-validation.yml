@@ -130,6 +130,7 @@ jobs:
         Jwt__Secret: "TestSecretKeyForE2ETestingPurposesOnly123456789"
         Jwt__Issuer: "PrivateSocial"
         Jwt__Audience: "PrivateSocialUsers"
+        ASPNETCORE_CORS_ORIGINS: "http://localhost:3000"
 
     - name: Wait for API to be ready
       run: |
@@ -174,7 +175,7 @@ jobs:
     - name: Run E2E tests
       working-directory: ./PrivateSocial.Web.React
       timeout-minutes: 10
-      run: npm run test:e2e -- --project=chromium --reporter=list,html
+      run: npm run test:e2e -- --project=chromium --reporter=list,html --workers=1
       env:
         CI: true
         PLAYWRIGHT_BASE_URL: "http://localhost:3000"
