@@ -9,6 +9,11 @@ on:
       - '**/appsettings*.json'
       - '.github/workflows/backend-validation.yml'
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 env:
   DOTNET_VERSION: '9.0.x'
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
@@ -55,6 +60,7 @@ jobs:
     - name: Generate test report
       uses: dorny/test-reporter@v1
       if: always()
+      continue-on-error: true
       with:
         name: .NET Test Results
         path: '**/TestResults/*.trx'
