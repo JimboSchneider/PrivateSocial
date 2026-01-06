@@ -41,6 +41,6 @@ public class ApplicationDbContextFactory : IDesignTimeDbContextFactory<Applicati
         
         optionsBuilder.UseSqlServer(connectionString);
 
-        return new ApplicationDbContext(optionsBuilder.Options);
+        return new ApplicationDbContext(optionsBuilder.Options, TimeProvider.System);
     }
 }

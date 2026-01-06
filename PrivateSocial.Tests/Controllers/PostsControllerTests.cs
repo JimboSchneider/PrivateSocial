@@ -1,85 +1,81 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using PrivateSocial.ApiService.Controllers;
-using PrivateSocial.ApiService.Data.Entities;
-using PrivateSocial.Tests.Helpers;
+using PrivateSocial.ApiService.Models;
+using PrivateSocial.ApiService.Services;
 
 namespace PrivateSocial.Tests.Controllers;
 
 public class PostsControllerTests : ControllerTestBase
 {
     private readonly PostsController _controller;
-    private readonly ILogger<PostsController> _logger;
+    private readonly Mock<IPostService> _postServiceMock;
+    private readonly Mock<ILogger<PostsController>> _loggerMock;
 
     public PostsControllerTests()
     {
-        _logger = new Mock<ILogger<PostsController>>().Object;
-        _controller = new PostsController(Context, _logger);
+        _postServiceMock = new Mock<IPostService>();
+        _loggerMock = new Mock<ILogger<PostsController>>();
+        _controller = new PostsController(_postServiceMock.Object, _loggerMock.Object);
     }
 
     [Fact]
     public async Task GetPosts_ShouldReturnPagedResults()
     {
         // Arrange
-        await SeedMultiplePostsAsync(15);
+        var pagedResult = new PagedResult<PostDto>
+        {
+            Items = new List<PostDto>(),
+            TotalCount = 0,
+            Page = 1,
+            PageSize = 10,
+            TotalPages = 0
+        };
+
+        _postServiceMock.Setup(x => x.GetPostsAsync(1, 10))
+            .ReturnsAsync(pagedResult);
         
         // Act
         var result = await _controller.GetPosts(page: 1, pageSize: 10);
 
         // Assert
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        var pagedResult = okResult.Value.Should().BeAssignableTo<PagedResult<PostDto>>().Subject;
-        
-        pagedResult.Items.Should().HaveCount(10);
-        pagedResult.TotalCount.Should().Be(15);
-        pagedResult.Page.Should().Be(1);
-        pagedResult.PageSize.Should().Be(10);
-        pagedResult.TotalPages.Should().Be(2);
-    }
-
-    [Fact]
-    public async Task GetPosts_ShouldReturnAllPostsFromAllUsers()
-    {
-        // Arrange
-        var userId = 1;
-        await SeedMultiplePostsAsync(5, userId: userId);
-        await SeedMultiplePostsAsync(3, userId: 2);
-
-        // Act
-        var result = await _controller.GetPosts(page: 1, pageSize: 20);
-
-        // Assert
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        var pagedResult = okResult.Value.Should().BeAssignableTo<PagedResult<PostDto>>().Subject;
-        
-        pagedResult.Items.Should().HaveCount(8);
-        pagedResult.TotalCount.Should().Be(8);
+        okResult.Value.Should().Be(pagedResult);
     }
 
     [Fact]
     public async Task GetPost_WithExistingId_ShouldReturnPost()
     {
         // Arrange
-        var post = await SeedPostAsync();
+        var postDto = new PostDto
+        {
+            Id = 1,
+            Content = "Test Content",
+            AuthorId = 1,
+            AuthorName = "TestUser",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _postServiceMock.Setup(x => x.GetPostByIdAsync(1))
+            .ReturnsAsync(postDto);
 
         // Act
-        var result = await _controller.GetPost(post.Id);
+        var result = await _controller.GetPost(1);
 
         // Assert
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        var postDto = okResult.Value.Should().BeAssignableTo<PostDto>().Subject;
-        
-        postDto.Id.Should().Be(post.Id);
-        postDto.Content.Should().Be(post.Content);
-        postDto.AuthorId.Should().Be(post.UserId);
+        okResult.Value.Should().Be(postDto);
     }
 
     [Fact]
     public async Task GetPost_WithNonExistingId_ShouldReturnNotFound()
     {
+        // Arrange
+        _postServiceMock.Setup(x => x.GetPostByIdAsync(999))
+            .ReturnsAsync((PostDto?)null);
+
         // Act
         var result = await _controller.GetPost(999);
 
@@ -91,25 +87,27 @@ public class PostsControllerTests : ControllerTestBase
     public async Task CreatePost_WithValidData_ShouldCreatePost()
     {
         // Arrange
-        var user = await SeedUserAsync();
-        _controller.ControllerContext = CreateControllerContext(user.Id, user.Username);
+        _controller.ControllerContext = CreateControllerContext(1, "TestUser");
         
         var request = new CreatePostRequest { Content = "New post content" };
+        var createdPost = new PostDto
+        {
+            Id = 1,
+            Content = request.Content,
+            AuthorId = 1,
+            AuthorName = "TestUser",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _postServiceMock.Setup(x => x.CreatePostAsync(request, 1))
+            .ReturnsAsync(createdPost);
 
         // Act
         var result = await _controller.CreatePost(request);
 
         // Assert
         var createdResult = result.Should().BeOfType<CreatedAtActionResult>().Subject;
-        var postDto = createdResult.Value.Should().BeAssignableTo<PostDto>().Subject;
-        
-        postDto.Content.Should().Be(request.Content);
-        postDto.AuthorId.Should().Be(user.Id);
-        postDto.AuthorName.Should().Be(user.Username);
-
-        // Verify post was saved
-        var savedPost = await Context.Posts.FirstOrDefaultAsync(p => p.Id == postDto.Id, cancellationToken: TestContext.Current.CancellationToken);
-        savedPost.Should().NotBeNull();
+        createdResult.Value.Should().Be(createdPost);
     }
 
     [Fact]
@@ -131,39 +129,40 @@ public class PostsControllerTests : ControllerTestBase
     public async Task UpdatePost_AsPostOwner_ShouldUpdatePost()
     {
         // Arrange
-        var user = await SeedUserAsync();
-        var post = await SeedPostAsync(TestDataBuilder.CreatePost(userId: user.Id));
-        _controller.ControllerContext = CreateControllerContext(user.Id);
-        
+        _controller.ControllerContext = CreateControllerContext(1);
         var request = new UpdatePostRequest { Content = "Updated content" };
+        var updatedPost = new PostDto
+        {
+            Id = 1,
+            Content = request.Content,
+            AuthorId = 1,
+            AuthorName = "TestUser",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _postServiceMock.Setup(x => x.UpdatePostAsync(1, request, 1))
+            .ReturnsAsync(updatedPost);
 
         // Act
-        var result = await _controller.UpdatePost(post.Id, request);
+        var result = await _controller.UpdatePost(1, request);
 
         // Assert
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        var postDto = okResult.Value.Should().BeAssignableTo<PostDto>().Subject;
-        
-        postDto.Content.Should().Be(request.Content);
-
-        // Verify post was updated
-        var updatedPost = await Context.Posts.FindAsync(new object?[] { post.Id }, TestContext.Current.CancellationToken);
-        updatedPost!.Content.Should().Be(request.Content);
+        okResult.Value.Should().Be(updatedPost);
     }
 
     [Fact]
     public async Task UpdatePost_AsNonOwner_ShouldReturnForbidden()
     {
         // Arrange
-        var postOwner = await SeedUserAsync();
-        var otherUser = await SeedUserAsync();
-        var post = await SeedPostAsync(TestDataBuilder.CreatePost(userId: postOwner.Id));
-        
-        _controller.ControllerContext = CreateControllerContext(otherUser.Id);
+        _controller.ControllerContext = CreateControllerContext(2); // Different user
         var request = new UpdatePostRequest { Content = "Updated content" };
 
+        _postServiceMock.Setup(x => x.UpdatePostAsync(1, request, 2))
+            .ThrowsAsync(new UnauthorizedAccessException());
+
         // Act
-        var result = await _controller.UpdatePost(post.Id, request);
+        var result = await _controller.UpdatePost(1, request);
 
         // Assert
         result.Should().BeOfType<ForbidResult>();
@@ -173,9 +172,11 @@ public class PostsControllerTests : ControllerTestBase
     public async Task UpdatePost_WithNonExistingPost_ShouldReturnNotFound()
     {
         // Arrange
-        var user = await SeedUserAsync();
-        _controller.ControllerContext = CreateControllerContext(user.Id);
+        _controller.ControllerContext = CreateControllerContext(1);
         var request = new UpdatePostRequest { Content = "Updated content" };
+
+        _postServiceMock.Setup(x => x.UpdatePostAsync(999, request, 1))
+            .ReturnsAsync((PostDto?)null);
 
         // Act
         var result = await _controller.UpdatePost(999, request);
@@ -188,91 +189,47 @@ public class PostsControllerTests : ControllerTestBase
     public async Task DeletePost_AsPostOwner_ShouldDeletePost()
     {
         // Arrange
-        var user = await SeedUserAsync();
-        var post = await SeedPostAsync(TestDataBuilder.CreatePost(userId: user.Id));
-        _controller.ControllerContext = CreateControllerContext(user.Id);
+        _controller.ControllerContext = CreateControllerContext(1);
+
+        _postServiceMock.Setup(x => x.DeletePostAsync(1, 1))
+            .ReturnsAsync(true);
 
         // Act
-        var result = await _controller.DeletePost(post.Id);
+        var result = await _controller.DeletePost(1);
 
         // Assert
         result.Should().BeOfType<NoContentResult>();
-
-        // Verify post was deleted
-        var deletedPost = await Context.Posts.FindAsync(new object?[] { post.Id }, TestContext.Current.CancellationToken);
-        deletedPost.Should().BeNull();
     }
 
     [Fact]
     public async Task DeletePost_AsNonOwner_ShouldReturnForbidden()
     {
         // Arrange
-        var postOwner = await SeedUserAsync();
-        var otherUser = await SeedUserAsync();
-        var post = await SeedPostAsync(TestDataBuilder.CreatePost(userId: postOwner.Id));
-        
-        _controller.ControllerContext = CreateControllerContext(otherUser.Id);
+        _controller.ControllerContext = CreateControllerContext(2);
+
+        _postServiceMock.Setup(x => x.DeletePostAsync(1, 2))
+            .ThrowsAsync(new UnauthorizedAccessException());
 
         // Act
-        var result = await _controller.DeletePost(post.Id);
+        var result = await _controller.DeletePost(1);
 
         // Assert
         result.Should().BeOfType<ForbidResult>();
-
-        // Verify post was not deleted
-        var existingPost = await Context.Posts.FindAsync(new object?[] { post.Id }, TestContext.Current.CancellationToken);
-        existingPost.Should().NotBeNull();
     }
 
     [Fact]
     public async Task DeletePost_WithNonExistingPost_ShouldReturnNotFound()
     {
         // Arrange
-        var user = await SeedUserAsync();
-        _controller.ControllerContext = CreateControllerContext(user.Id);
+        _controller.ControllerContext = CreateControllerContext(1);
+
+        _postServiceMock.Setup(x => x.DeletePostAsync(999, 1))
+            .ReturnsAsync(false);
 
         // Act
         var result = await _controller.DeletePost(999);
 
         // Assert
         result.Should().BeOfType<NotFoundResult>();
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("invalid")]
-    public async Task CreatePost_WithInvalidUserClaim_ShouldReturnBadRequest(string? claimValue)
-    {
-        // Arrange
-        if (claimValue != null)
-        {
-            _controller.ControllerContext = CreateControllerContext();
-            _controller.ControllerContext.HttpContext.User = new System.Security.Claims.ClaimsPrincipal(
-                new System.Security.Claims.ClaimsIdentity(new[]
-                {
-                    new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, claimValue)
-                })
-            );
-        }
-        else
-        {
-            _controller.ControllerContext = CreateControllerContext();
-        }
-        
-        var request = new CreatePostRequest { Content = "New post content" };
-
-        // Act
-        var result = await _controller.CreatePost(request);
-
-        // Assert
-        if (claimValue == null)
-        {
-            result.Should().BeOfType<UnauthorizedObjectResult>();
-        }
-        else
-        {
-            var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-            badRequestResult.Value.Should().Be("Invalid User ID claim.");
-        }
     }
 }

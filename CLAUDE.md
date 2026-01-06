@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 PrivateSocial is a .NET Aspire-based distributed application using:
-- **.NET 9.0** with C#
+- **.NET 10.0** with C#
 - **React + TypeScript** frontend with Vite bundler
 - **ASP.NET Core Web API** backend with Controller architecture
 - **SQL Server** database with Entity Framework Core (Code First)

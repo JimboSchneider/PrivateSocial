@@ -1,117 +1,29 @@
-using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using PrivateSocial.ApiService.Data;
+using PrivateSocial.ApiService.Extensions;
 using PrivateSocial.ApiService.Services;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
 
-// Add SQL Server with Entity Framework
-// Check if we have a connection string from Key Vault first
-var connectionString = builder.Configuration["DatabaseConnectionString"];
-if (!string.IsNullOrEmpty(connectionString))
-{
-    // Use connection string from Key Vault (production scenario)
-    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlServer(connectionString));
-}
-else
-{
-    // Use Aspire service discovery (local development with containers)
-    builder.AddSqlServerDbContext<ApplicationDbContext>("privatesocial");
-}
+// Add Database
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddApiDatabase(builder);
 
-// Add services to the container.
-builder.Services.AddControllers()
-    .ConfigureApiBehaviorOptions(options =>
-    {
-        options.InvalidModelStateResponseFactory = context =>
-        {
-            var errors = context.ModelState
-                .Where(x => x.Value?.Errors.Count > 0)
-                .Select(x => new { Field = x.Key, Messages = x.Value!.Errors.Select(e => e.ErrorMessage) })
-                .ToList();
-
-            var firstError = errors.FirstOrDefault();
-            var message = firstError != null 
-                ? firstError.Messages.FirstOrDefault() ?? "Validation failed"
-                : "Validation failed";
-
-            return new BadRequestObjectResult(new { message });
-        };
-    });
-builder.Services.AddProblemDetails();
+// Add Controllers and Problem Details
+builder.Services.AddApiControllers();
 
 // Add Authentication
-var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-
-// Try to get the secret from configuration first (for local development)
-// If not found, try to get it from the secret name (which will be loaded from Key Vault)
-var secret = jwtSettings["Secret"];
-if (string.IsNullOrEmpty(secret))
-{
-    var secretName = jwtSettings["SecretName"];
-    if (!string.IsNullOrEmpty(secretName))
-    {
-        // When Key Vault is configured, the secret will be available directly in configuration
-        // using the secret name as the key
-        secret = builder.Configuration[secretName];
-    }
-}
-
-if (string.IsNullOrEmpty(secret))
-{
-    secret = "your-256-bit-secret-key-for-development-only!";
-}
-
-var key = Encoding.ASCII.GetBytes(secret);
-
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.RequireHttpsMetadata = false;
-    options.SaveToken = true;
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(key),
-        ValidateIssuer = true,
-        ValidIssuer = jwtSettings["Issuer"] ?? "PrivateSocial",
-        ValidateAudience = true,
-        ValidAudience = jwtSettings["Audience"] ?? "PrivateSocialUsers",
-        ValidateLifetime = true,
-        ClockSkew = TimeSpan.Zero
-    };
-});
-
-builder.Services.AddAuthorization();
+builder.Services.AddApiAuthentication(builder.Configuration);
 
 // Register services
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IPostService, PostService>();
 
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi(options =>
-{
-    options.AddDocumentTransformer((document, _, _) =>
-    {
-        document.Info = new()
-        {
-            Title = "PrivateSocial API",
-            Version = "v1",
-            Description = "API for PrivateSocial application"
-        };
-        return Task.CompletedTask;
-    });
-});
+// Add OpenAPI
+builder.Services.AddApiOpenApi();
 
 var app = builder.Build();
 

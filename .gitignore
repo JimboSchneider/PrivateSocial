@@ -42,14 +42,14 @@ dist-ssr/
 .env.test.local
 
 # Playwright test results
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+test-output.log
 
-apphost.log
-
-aspire.log
+# Application logs
+*.log
 .azure
 
 # Local configuration files
