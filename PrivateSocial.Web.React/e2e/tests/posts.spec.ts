@@ -122,6 +122,14 @@ test.describe('Posts', () => {
     await page.fill('textarea[placeholder="What\'s on your mind? Share your thoughts..."]', postContent);
     await page.click('button:has-text("Share Post")');
 
+    // Wait for the post creation API call to complete
+    await page.waitForResponse(response =>
+      response.url().includes('/api/posts') &&
+      response.request().method() === 'POST' &&
+      (response.status() === 200 || response.status() === 201),
+      { timeout: 10000 }
+    );
+
     // Wait for the post to appear
     await page.waitForFunction(
       (content) => {
@@ -141,10 +149,25 @@ test.describe('Posts', () => {
     const deleteButton = postCard.locator('button').filter({ hasText: 'Delete' });
     await expect(deleteButton).toBeVisible();
 
+    // Set up dialog handler to accept confirmation
+    page.once('dialog', dialog => {
+      expect(dialog.type()).toBe('confirm');
+      expect(dialog.message()).toContain('Are you sure');
+      dialog.accept();
+    });
+
     // Click delete button
     await deleteButton.click();
 
-    // Wait for the post to be removed
+    // Wait for the DELETE API call to complete
+    await page.waitForResponse(response =>
+      response.url().includes('/api/posts') &&
+      response.request().method() === 'DELETE' &&
+      response.status() === 200,
+      { timeout: 10000 }
+    );
+
+    // Wait for the post to be removed from the UI
     await expect(postCard).not.toBeVisible({ timeout: 10000 });
   });
 
@@ -243,7 +266,23 @@ test.describe('Posts', () => {
     await page.fill('textarea[placeholder="What\'s on your mind? Share your thoughts..."]', postContent);
     await page.click('button:has-text("Share Post")');
 
-    // Wait for the list to refresh and post to appear
+    // Wait for the POST API call to complete
+    await page.waitForResponse(response =>
+      response.url().includes('/api/posts') &&
+      response.request().method() === 'POST' &&
+      (response.status() === 200 || response.status() === 201),
+      { timeout: 10000 }
+    );
+
+    // Wait for the GET API call (refresh) to complete
+    await page.waitForResponse(response =>
+      response.url().includes('/api/posts') &&
+      response.request().method() === 'GET' &&
+      response.status() === 200,
+      { timeout: 10000 }
+    );
+
+    // Wait for the list to refresh and post to appear at the top
     await page.waitForFunction(
       (content) => {
         const posts = document.querySelectorAll('.card');
