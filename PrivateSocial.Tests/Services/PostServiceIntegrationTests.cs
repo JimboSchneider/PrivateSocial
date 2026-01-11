@@ -1,7 +1,4 @@
 using FluentAssertions;
-using Microsoft.Extensions.Logging;
-using Moq;
-using PrivateSocial.ApiService.Controllers;
 using PrivateSocial.ApiService.Data.Entities;
 using PrivateSocial.ApiService.Models;
 using PrivateSocial.ApiService.Services;
@@ -15,8 +12,7 @@ public class PostServiceIntegrationTests : IntegrationTestBase
     public override async ValueTask InitializeAsync()
     {
         await base.InitializeAsync();
-        var logger = new Mock<ILogger<PostService>>().Object;
-        _postService = new PostService(Context, logger);
+        _postService = new PostService(Context);
     }
 
     [Fact]

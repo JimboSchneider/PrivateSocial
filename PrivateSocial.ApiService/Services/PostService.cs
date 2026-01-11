@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using PrivateSocial.ApiService.Controllers;
 using PrivateSocial.ApiService.Data;
 using PrivateSocial.ApiService.Data.Entities;
 using PrivateSocial.ApiService.Models;
@@ -10,12 +9,10 @@ namespace PrivateSocial.ApiService.Services;
 public class PostService : IPostService
 {
     private readonly ApplicationDbContext _context;
-    private readonly ILogger<PostService> _logger;
 
-    public PostService(ApplicationDbContext context, ILogger<PostService> logger)
+    public PostService(ApplicationDbContext context)
     {
         _context = context;
-        _logger = logger;
     }
 
     public async Task<PagedResult<PostDto>> GetPostsAsync(int page, int pageSize)
