@@ -32,10 +32,18 @@ tsconfig.tsbuildinfo
 !.vscode/extensions.json
 !.vscode/settings.json
 .idea
+.vs/
 *.suo
 *.ntvs*
 *.njsproj
 *.sw?
+*.csproj.user
+
+# Claude Code
+.claude/
+
+# Windows artifacts
+nul
 
 # Environment variables
 .env
