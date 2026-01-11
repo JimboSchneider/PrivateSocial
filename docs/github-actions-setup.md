@@ -1,6 +1,41 @@
 # GitHub Actions Setup
 
-This document describes the GitHub secrets and variables required for the CI/CD pipelines.
+This document describes the GitHub secrets, variables, and workflows for the CI/CD pipelines.
+
+## Workflow Structure
+
+The repository uses a modular workflow approach for PR validation:
+
+### Main Workflows
+
+1. **`pr-validation.yml`** - Orchestrates all PR checks
+   - Triggers on PRs to `main` branch
+   - Detects changes and runs relevant validations
+   - Provides consolidated status checks
+
+2. **`backend-validation.yml`** - .NET validation
+   - Builds and tests .NET solution
+   - Runs unit tests with coverage
+   - Checks for build warnings
+
+3. **`frontend-validation.yml`** - React validation
+   - ESLint and TypeScript checks
+   - Builds React application
+   - Runs unit tests
+
+4. **`e2e-validation.yml`** - End-to-end testing
+   - Spins up SQL Server and Redis
+   - Runs Playwright tests
+   - Captures screenshots on failure
+
+5. **`claude-code-review.yml`** - Automated code review
+   - Runs on PR open/update
+   - Provides AI-powered code review
+   - Uses sticky comments for updates
+
+6. **`claude.yml`** - Interactive Claude assistant
+   - Responds to @claude mentions
+   - Helps with code questions in PRs/issues
 
 ## Required GitHub Secrets
 
@@ -8,30 +43,14 @@ These secrets should be configured at the repository level in Settings → Secre
 
 ### CI/CD Secrets
 
-1. **CI_SQL_PASSWORD**
-   - Description: SQL Server SA password for CI/CD database
-   - Example: `YourStrong@Passw0rd`
-   - Used in: CI and E2E test workflows
+1. **CLAUDE_CODE_OAUTH_TOKEN**
+   - Description: OAuth token for Claude Code GitHub integration
+   - Required for: Claude code review and interactive workflows
+   - Get from: Claude Code GitHub integration setup
 
-2. **CI_DATABASE_CONNECTION_STRING**
-   - Description: Full connection string for CI/CD SQL Server
-   - Example: `Server=localhost,1433;Database=privatesocial;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True`
-   - Used in: CI and E2E test workflows
+## GitHub Variables (Optional - for future Azure deployment)
 
-3. **CI_JWT_SECRET**
-   - Description: JWT signing key for CI/CD environment
-   - Example: Generate with `openssl rand -base64 32`
-   - Used in: CI and E2E test workflows
-
-### Azure Deployment Secrets
-
-4. **AZURE_CACHE_PASSWORD**
-   - Description: Redis cache password for Azure deployment
-   - Used in: Azure deployment workflow
-
-## Required GitHub Variables
-
-These variables should be configured at the repository level in Settings → Secrets and variables → Actions → Variables tab.
+These variables would be configured at the repository level in Settings → Secrets and variables → Actions → Variables tab when Azure deployment is needed.
 
 ### Azure Deployment Variables
 
@@ -78,16 +97,18 @@ These variables should be configured at the repository level in Settings → Sec
   - Wait timer (optional)
 - Override production-specific secrets/variables
 
-## Local Development
+## Setting Up PR Checks
 
-For local development, you can create a `.env` file (not committed) with:
+To enable PR validation checks:
 
-```bash
-# .env.local
-export CI_SQL_PASSWORD="YourLocalPassword"
-export CI_DATABASE_CONNECTION_STRING="Server=localhost,1433;Database=privatesocial_dev;User Id=sa;Password=YourLocalPassword;TrustServerCertificate=True"
-export CI_JWT_SECRET="your-local-jwt-secret"
-```
+1. Go to Settings → Branches
+2. Add a branch protection rule for `main`
+3. Enable "Require status checks to pass before merging"
+4. Select these status checks:
+   - `PR Validation Status`
+   - `Backend Validation` (if available)
+   - `Frontend Validation` (if available)
+   - `E2E Tests` (if available)
 
 ## Security Best Practices
 

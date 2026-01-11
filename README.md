@@ -16,7 +16,7 @@ PrivateSocial is a full-stack social networking application demonstrating:
 ## Technology Stack
 
 ### Backend
-- **.NET 9.0** - Backend framework
+- **.NET 10.0** - Backend framework
 - **ASP.NET Core** - Web API framework
 - **Entity Framework Core** - ORM for SQL Server
 - **JWT Authentication** - Secure token-based auth
@@ -41,7 +41,7 @@ PrivateSocial is a full-stack social networking application demonstrating:
 
 ## Prerequisites
 
-- .NET 9.0 SDK
+- .NET 10.0 SDK
 - Docker Desktop
 - Node.js 20+ (for local frontend development)
 

@@ -5,9 +5,12 @@ namespace PrivateSocial.ApiService.Data;
 
 public class ApplicationDbContext : DbContext
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+    private readonly TimeProvider _timeProvider;
+
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, TimeProvider timeProvider)
         : base(options)
     {
+        _timeProvider = timeProvider;
     }
 
     public DbSet<User> Users => Set<User>();
@@ -28,21 +31,23 @@ public class ApplicationDbContext : DbContext
             .Where(e => e.Entity is User or Post &&
                        (e.State == EntityState.Added || e.State == EntityState.Modified));
 
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
         foreach (var entityEntry in entries)
         {
             if (entityEntry.State == EntityState.Added)
             {
                 if (entityEntry.Entity is User user)
-                    user.CreatedAt = DateTime.UtcNow;
+                    user.CreatedAt = now;
                 else if (entityEntry.Entity is Post post)
-                    post.CreatedAt = DateTime.UtcNow;
+                    post.CreatedAt = now;
             }
             else if (entityEntry.State == EntityState.Modified)
             {
                 if (entityEntry.Entity is User user)
-                    user.UpdatedAt = DateTime.UtcNow;
+                    user.UpdatedAt = now;
                 else if (entityEntry.Entity is Post post)
-                    post.UpdatedAt = DateTime.UtcNow;
+                    post.UpdatedAt = now;
             }
         }
 

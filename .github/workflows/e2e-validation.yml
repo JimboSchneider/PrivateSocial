@@ -1,0 +1,258 @@
+name: E2E Validation
+
+on:
+  workflow_call:
+  pull_request:
+    paths:
+      - 'PrivateSocial.Web.React/**'
+      - 'PrivateSocial.ApiService/**'
+      - '.github/workflows/e2e-validation.yml'
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  NODE_VERSION: '20.x'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+
+jobs:
+  e2e-tests:
+    name: Run E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_SA_PASSWORD: 'TestP@ssw0rd123!'
+          MSSQL_PID: 'Developer'
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd="/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P TestP@ssw0rd123! -C -Q 'SELECT 1'"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: PrivateSocial.Web.React/package-lock.json
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Restore .NET dependencies
+      run: dotnet restore
+
+    - name: Build .NET solution
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Install Node dependencies
+      working-directory: ./PrivateSocial.Web.React
+      run: npm ci
+
+    - name: Build React app
+      working-directory: ./PrivateSocial.Web.React
+      run: npm run build
+
+    - name: Cache Playwright browsers
+      uses: actions/cache@v4
+      id: playwright-cache
+      with:
+        path: |
+          ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-playwright-
+
+    - name: Install Playwright browsers
+      working-directory: ./PrivateSocial.Web.React
+      run: |
+        if [[ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]]; then
+          echo "Installing Playwright browsers..."
+          npx playwright install --with-deps chromium
+        else
+          echo "Using cached Playwright browsers"
+          # Install only system dependencies without re-downloading browsers
+          npx playwright install-deps chromium
+        fi
+
+    - name: Start API Service
+      run: |
+        cd PrivateSocial.ApiService
+        # Start the API service in the background with proper process management
+        dotnet run --configuration Release > api.log 2>&1 &
+        echo $! > api.pid
+        API_PID=$(cat api.pid)
+        echo "API Service started with PID: $API_PID"
+        
+        # Verify the process is running
+        sleep 2
+        if ! ps -p $API_PID > /dev/null; then
+          echo "Failed to start API service. Log output:"
+          cat api.log
+          exit 1
+        fi
+      env:
+        ASPNETCORE_ENVIRONMENT: Development
+        ASPNETCORE_URLS: "http://localhost:5475"
+        ConnectionStrings__privatesocial: "Server=localhost,1433;Database=PrivateSocial;User Id=sa;Password=TestP@ssw0rd123!;TrustServerCertificate=True"
+        ConnectionStrings__redis: "localhost:6379"
+        Jwt__Secret: "TestSecretKeyForE2ETestingPurposesOnly123456789"
+        Jwt__Issuer: "PrivateSocial"
+        Jwt__Audience: "PrivateSocialUsers"
+        ASPNETCORE_CORS_ORIGINS: "http://localhost:3000"
+
+    - name: Wait for API to be ready
+      run: |
+        echo "Waiting for API to be ready..."
+        MAX_ATTEMPTS=30
+        ATTEMPT=0
+        
+        while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+          ATTEMPT=$((ATTEMPT + 1))
+          
+          if curl -f http://localhost:5475/health 2>/dev/null; then
+            echo "✅ API is ready after $ATTEMPT attempts!"
+            exit 0
+          fi
+          
+          echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: API not ready yet..."
+          
+          # Check if process is still running
+          if [ -f PrivateSocial.ApiService/api.pid ]; then
+            PID=$(cat PrivateSocial.ApiService/api.pid)
+            if ! ps -p $PID > /dev/null; then
+              echo "❌ API process died. Last log output:"
+              tail -n 50 PrivateSocial.ApiService/api.log
+              exit 1
+            fi
+          fi
+          
+          sleep 2
+        done
+        
+        echo "❌ API failed to become ready after $MAX_ATTEMPTS attempts"
+        echo "Last log output:"
+        tail -n 50 PrivateSocial.ApiService/api.log
+        exit 1
+
+    - name: Verify API is accessible
+      run: |
+        echo "Testing API connectivity..."
+        curl -f http://localhost:5475/health || (echo "API not accessible!" && exit 1)
+        echo "✅ API is accessible"
+        
+    - name: Run E2E tests
+      working-directory: ./PrivateSocial.Web.React
+      timeout-minutes: 10
+      run: npm run test:e2e -- --project=chromium --reporter=list,html --workers=1
+      env:
+        CI: true
+        PLAYWRIGHT_BASE_URL: "http://localhost:3000"
+        API_BASE_URL: "http://localhost:5475"
+        VITE_API_URL: "http://localhost:5475"
+        services__apiservice__http__0: "http://localhost:5475"
+        services__apiservice__https__0: "http://localhost:5475"
+
+    - name: Stop services
+      if: always()
+      run: |
+        # Stop any Playwright dev server that might be running
+        pkill -f "npm run dev" 2>/dev/null || true
+        pkill -f "vite" 2>/dev/null || true
+        
+        # Stop API Service
+        if [ -f PrivateSocial.ApiService/api.pid ]; then
+          PID=$(cat PrivateSocial.ApiService/api.pid)
+          echo "Stopping API Service (PID: $PID)"
+          
+          # Try graceful shutdown first
+          if ps -p $PID > /dev/null 2>&1; then
+            kill -TERM $PID 2>/dev/null || true
+            
+            # Wait for graceful shutdown (max 5 seconds)
+            for i in {1..5}; do
+              if ! ps -p $PID > /dev/null 2>&1; then
+                echo "✅ API Service stopped gracefully"
+                break
+              fi
+              sleep 1
+            done
+            
+            # Force kill if still running
+            if ps -p $PID > /dev/null 2>&1; then
+              echo "Force stopping API Service..."
+              kill -9 $PID 2>/dev/null || true
+            fi
+          else
+            echo "API Service already stopped"
+          fi
+          
+          # Save logs for debugging if needed
+          if [ -f PrivateSocial.ApiService/api.log ]; then
+            echo "Saving API logs..."
+            cp PrivateSocial.ApiService/api.log api-service.log || true
+          fi
+        else
+          echo "No API Service PID file found"
+        fi
+
+    - name: Upload E2E test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-test-results
+        path: |
+          PrivateSocial.Web.React/playwright-report/
+          PrivateSocial.Web.React/test-results/
+        retention-days: 30
+
+    - name: Upload screenshots on failure
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: e2e-failure-screenshots
+        path: |
+          PrivateSocial.Web.React/test-results/**/*.png
+          PrivateSocial.Web.React/test-results/**/*.webm
+        retention-days: 7
+
+    - name: Upload service logs on failure
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: service-logs
+        path: |
+          api-service.log
+          PrivateSocial.ApiService/api.log
+        retention-days: 7

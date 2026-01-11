@@ -9,7 +9,7 @@ var sqlServer = builder.AddSqlServer("sql", password: sqlPassword)
     .WithDataVolume()
     .AddDatabase("privatesocial");
 
-// Configure API service
+// Configure API service (port 5475 is set in launchSettings.json)
 var apiServiceBuilder = builder.AddProject<Projects.PrivateSocial_ApiService>("apiservice")
     .WithHttpHealthCheck("/health")
     .WithReference(sqlServer)
@@ -33,7 +33,7 @@ else if (builder.ExecutionContext.IsPublishMode)
 var apiService = apiServiceBuilder;
 
 builder.AddDockerfile("webfrontend", "../PrivateSocial.Web.React")
-    .WithHttpEndpoint(targetPort: 80, name: "http")
+    .WithHttpEndpoint(port: 3000, targetPort: 80, name: "http")
     .WithExternalHttpEndpoints()
     .WithReference(apiService)
     .WaitFor(apiService);
