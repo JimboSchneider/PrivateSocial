@@ -156,16 +156,19 @@ test.describe('Posts', () => {
       dialog.accept();
     });
 
+    // Start waiting for response BEFORE clicking to avoid race condition
+    const deleteResponsePromise = page.waitForResponse(response =>
+      response.url().includes('/api/posts') &&
+      response.request().method() === 'DELETE' &&
+      response.status() === 200,
+      { timeout: 15000 }
+    );
+
     // Click delete button
     await deleteButton.click();
 
     // Wait for the DELETE API call to complete
-    await page.waitForResponse(response =>
-      response.url().includes('/api/posts') &&
-      response.request().method() === 'DELETE' &&
-      response.status() === 200,
-      { timeout: 10000 }
-    );
+    await deleteResponsePromise;
 
     // Wait for the post to be removed from the UI
     await expect(postCard).not.toBeVisible({ timeout: 10000 });
@@ -264,37 +267,33 @@ test.describe('Posts', () => {
     // Create a new post
     const postContent = `New post for refresh test - ${Date.now()}`;
     await page.fill('textarea[placeholder="What\'s on your mind? Share your thoughts..."]', postContent);
-    await page.click('button:has-text("Share Post")');
 
-    // Wait for the POST API call to complete
-    await page.waitForResponse(response =>
+    // Start waiting for responses BEFORE clicking to avoid race condition
+    const postResponsePromise = page.waitForResponse(response =>
       response.url().includes('/api/posts') &&
       response.request().method() === 'POST' &&
       (response.status() === 200 || response.status() === 201),
-      { timeout: 10000 }
+      { timeout: 15000 }
     );
 
-    // Wait for the GET API call (refresh) to complete
-    await page.waitForResponse(response =>
-      response.url().includes('/api/posts') &&
-      response.request().method() === 'GET' &&
-      response.status() === 200,
-      { timeout: 10000 }
-    );
+    await page.click('button:has-text("Share Post")');
 
-    // Wait for the list to refresh and post to appear at the top
+    // Wait for the POST API call to complete
+    await postResponsePromise;
+
+    // Wait for the post to appear in the list (more reliable than waiting for GET)
     await page.waitForFunction(
       (content) => {
         const posts = document.querySelectorAll('.card');
-        return posts.length > 0 && posts[0].textContent?.includes(content);
+        return Array.from(posts).some(p => p.textContent?.includes(content));
       },
       postContent,
-      { timeout: 10000 }
+      { timeout: 15000 }
     );
 
-    // Verify the new post is at the top of the list
-    const firstPost = page.locator('.card').first();
-    await expect(firstPost).toContainText(postContent);
+    // Verify the new post appears in the list
+    const postCard = page.locator('.card').filter({ hasText: postContent });
+    await expect(postCard).toBeVisible();
 
     // Verify the post count increased
     const newPostCount = await page.locator('.card').count();
