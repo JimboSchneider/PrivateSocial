@@ -171,7 +171,7 @@ npm test
 
 The project includes comprehensive test coverage:
 
-### Backend Tests (44+ tests)
+### Backend Tests (46+ tests)
 - **Controller Tests**: Testing API endpoints with mocked dependencies
 - **Service Tests**: Testing business logic with in-memory database
 - **Integration Tests**: Testing distributed scenarios
