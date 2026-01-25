@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using PrivateSocial.ApiService.Validation;
 
 namespace PrivateSocial.ApiService.Models.Auth;
 
@@ -13,7 +14,8 @@ public class RegisterRequest
     public required string Email { get; set; }
 
     [Required]
-    [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters long")]
+    [StringLength(100, MinimumLength = 12, ErrorMessage = "Password must be at least 12 characters long")]
+    [StrongPassword]
     public required string Password { get; set; }
 
     [StringLength(100)]
