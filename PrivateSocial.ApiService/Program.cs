@@ -16,7 +16,7 @@ builder.Services.AddApiDatabase(builder);
 builder.Services.AddApiControllers();
 
 // Add Authentication
-builder.Services.AddApiAuthentication(builder.Configuration);
+builder.Services.AddApiAuthentication(builder.Configuration, builder.Environment);
 
 // Register services
 builder.Services.AddScoped<IAuthService, AuthService>();
