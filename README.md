@@ -1,5 +1,17 @@
 # PrivateSocial
 
+[![CI/CD Pipeline](https://github.com/JimboSchneider/PrivateSocial/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/JimboSchneider/PrivateSocial/actions/workflows/ci.yml)
+[![E2E Tests](https://github.com/JimboSchneider/PrivateSocial/actions/workflows/e2e-tests.yml/badge.svg?branch=main)](https://github.com/JimboSchneider/PrivateSocial/actions/workflows/e2e-tests.yml)
+[![Frontend Validation](https://github.com/JimboSchneider/PrivateSocial/actions/workflows/frontend-validation.yml/badge.svg?branch=main)](https://github.com/JimboSchneider/PrivateSocial/actions/workflows/frontend-validation.yml)
+[![Backend Validation](https://github.com/JimboSchneider/PrivateSocial/actions/workflows/backend-validation.yml/badge.svg?branch=main)](https://github.com/JimboSchneider/PrivateSocial/actions/workflows/backend-validation.yml)
+
+![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)
+![Node](https://img.shields.io/badge/Node.js-20.x-339933?logo=node.js&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-119%2B-success)
+![License](https://img.shields.io/badge/License-MIT-blue)
+
 A modern distributed social platform built with .NET Aspire, showcasing cloud-native patterns and best practices.
 
 ## Overview
@@ -170,7 +182,9 @@ npm test
 
 ## Testing
 
-The project includes comprehensive test coverage with **119+ tests** across backend and frontend:
+![CI/CD Pipeline](https://github.com/JimboSchneider/PrivateSocial/actions/workflows/ci.yml/badge.svg?branch=main)
+
+The project includes comprehensive test coverage with **119+ tests** across backend and frontend, with automated testing on every push to main:
 
 ### Backend Tests (46 tests)
 - **Controller Tests**: Testing API endpoints with mocked dependencies
@@ -239,14 +253,36 @@ The application uses Aspire's configuration system with automatic service discov
 
 ## Continuous Integration
 
-The project includes automated workflows for code quality and testing:
+### Status Badges
 
-- **Claude Code Review**: Automated AI-powered code review on pull requests
-- **CI Pipeline**: Automated build and test validation
-- **Frontend Validation**: Linting and testing for React code
-- **Backend Validation**: Build and test validation for .NET code
-- **E2E Testing**: End-to-end integration tests
-- **PR Validation**: Comprehensive validation before merge
+The badges at the top of this README show real-time status of the main branch:
+
+- **CI/CD Pipeline** [![CI/CD](https://github.com/JimboSchneider/PrivateSocial/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/JimboSchneider/PrivateSocial/actions/workflows/ci.yml) - Full build, test, and deployment pipeline
+- **E2E Tests** [![E2E Tests](https://github.com/JimboSchneider/PrivateSocial/actions/workflows/e2e-tests.yml/badge.svg?branch=main)](https://github.com/JimboSchneider/PrivateSocial/actions/workflows/e2e-tests.yml) - End-to-end integration tests with real services
+- **Frontend Validation** - Linting and unit testing for React code
+- **Backend Validation** - Build and unit testing for .NET code
+
+Click any badge to view detailed test results and logs.
+
+### Automated Workflows
+
+The project includes automated workflows that run on every push to main:
+
+- **Main Branch Test Report**: Generates comprehensive test summary with coverage
+- **Claude Code Review**: AI-powered code review on pull requests
+- **CI/CD Pipeline**: Build, test, and artifact publication
+- **Frontend Validation**: Linting, type checking, and unit tests
+- **Backend Validation**: Build, unit tests, and code quality checks
+- **E2E Testing**: Full integration tests with SQL Server and Redis
+- **PR Validation**: Comprehensive validation before merge approval
+
+### Test Results
+
+After each push to main, you can view:
+- **Test Summary**: Check the Actions tab for detailed test reports
+- **Coverage Reports**: Download coverage artifacts from workflow runs
+- **E2E Test Videos**: Playwright records videos of E2E test failures
+- **Test Artifacts**: All test results retained for 90 days
 
 ## Security
 
