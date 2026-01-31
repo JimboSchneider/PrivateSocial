@@ -21,9 +21,9 @@ public class TestDataBuilder
             // Don't set Id - let EF Core generate it in most cases
             Username = username ?? $"testuser{id}",
             Email = email ?? $"test{id}@example.com",
-            PasswordHash = password != null 
-                ? BCrypt.Net.BCrypt.HashPassword(password) 
-                : BCrypt.Net.BCrypt.HashPassword("Test123!"),
+            PasswordHash = password != null
+                ? BCrypt.Net.BCrypt.HashPassword(password)
+                : BCrypt.Net.BCrypt.HashPassword("ValidPass123!"),
             FirstName = firstName ?? "Test",
             LastName = lastName ?? "User",
             IsActive = isActive,

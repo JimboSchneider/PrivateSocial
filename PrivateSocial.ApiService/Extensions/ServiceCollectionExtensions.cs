@@ -9,7 +9,7 @@ namespace PrivateSocial.ApiService.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddApiAuthentication(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddApiAuthentication(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
         var jwtSettings = configuration.GetSection("JwtSettings");
 
@@ -41,7 +41,7 @@ public static class ServiceCollectionExtensions
         })
         .AddJwtBearer(options =>
         {
-            options.RequireHttpsMetadata = false;
+            options.RequireHttpsMetadata = !environment.IsDevelopment();
             options.SaveToken = true;
             options.TokenValidationParameters = new TokenValidationParameters
             {
