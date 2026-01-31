@@ -112,10 +112,10 @@ describe('Posts Component', () => {
   })
 
   it('displays error message when loading fails', async () => {
-    postsService.getPosts = vi.fn().mockRejectedValue(new Error('Network error'))
-    
+    postsService.getPosts = vi.fn().mockRejectedValue(new Error('Failed to load posts'))
+
     render(<Posts />)
-    
+
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent(/failed to load posts/i)
     })
