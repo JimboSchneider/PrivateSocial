@@ -129,8 +129,9 @@ npm test
 ## Features
 
 ### Authentication & Authorization
-- **JWT Authentication**: Secure token-based authentication
-- **User Registration**: Create accounts with email validation
+- **JWT Authentication**: Secure token-based authentication with HTTPS enforcement
+- **User Registration**: Create accounts with email validation and strong password requirements
+- **Strong Passwords**: 12+ character minimum with uppercase, lowercase, number, and special character
 - **User Login**: Authenticate with username/password
 - **Protected Routes**: Secure pages requiring authentication
 - **Role-based Access**: Different permission levels
@@ -151,7 +152,7 @@ npm test
 ## API Endpoints
 
 ### Authentication
-- `POST /api/auth/register` - User registration
+- `POST /api/auth/register` - User registration (requires strong password: 12+ chars with uppercase, lowercase, number, special char)
 - `POST /api/auth/login` - User login
 - `GET /api/auth/me` - Get current user info (protected)
 
@@ -169,19 +170,31 @@ npm test
 
 ## Testing
 
-The project includes comprehensive test coverage:
+The project includes comprehensive test coverage with **119+ tests** across backend and frontend:
 
-### Backend Tests (46+ tests)
+### Backend Tests (46 tests)
 - **Controller Tests**: Testing API endpoints with mocked dependencies
 - **Service Tests**: Testing business logic with in-memory database
 - **Integration Tests**: Testing distributed scenarios
 
-Run tests with:
+Run backend tests:
 ```bash
 dotnet test
 ```
 
-### Test Structure
+### Frontend Tests (73 tests)
+- **Component Tests**: Testing React components with React Testing Library
+- **Service Tests**: Testing API service layer
+- **Hook Tests**: Testing custom React hooks
+- **Page Tests**: Testing full page components with user interactions
+
+Run frontend tests:
+```bash
+cd PrivateSocial.Web.React
+npm test
+```
+
+### Backend Test Structure
 ```
 PrivateSocial.Tests/
 ├── Controllers/
@@ -197,6 +210,24 @@ PrivateSocial.Tests/
     └── TestDataBuilder.cs
 ```
 
+### Frontend Test Structure
+```
+PrivateSocial.Web.React/src/
+├── components/
+│   ├── CreatePostForm.test.tsx
+│   ├── LoadingSpinner.test.tsx
+│   ├── PostCard.test.tsx
+│   └── ProtectedRoute.test.tsx
+├── contexts/
+│   └── AuthContext.test.tsx
+├── pages/
+│   ├── Login.test.tsx
+│   ├── Posts.test.tsx
+│   └── Register.test.tsx
+└── services/
+    └── postsService.test.ts
+```
+
 ## Configuration
 
 The application uses Aspire's configuration system with automatic service discovery. No manual configuration is required for inter-service communication.
@@ -206,14 +237,31 @@ The application uses Aspire's configuration system with automatic service discov
 - Service discovery handled through environment variables
 - Connection strings managed by Aspire
 
+## Continuous Integration
+
+The project includes automated workflows for code quality and testing:
+
+- **Claude Code Review**: Automated AI-powered code review on pull requests
+- **CI Pipeline**: Automated build and test validation
+- **Frontend Validation**: Linting and testing for React code
+- **Backend Validation**: Build and test validation for .NET code
+- **E2E Testing**: End-to-end integration tests
+- **PR Validation**: Comprehensive validation before merge
+
 ## Security
 
-- JWT tokens for authentication
-- Password hashing with BCrypt
-- HTTPS enforcement in production
-- Security headers configured in nginx
-- Input validation and sanitization
-- SQL injection prevention with Entity Framework Core
+### Authentication & Passwords
+- **JWT Authentication**: Secure token-based authentication with HTTPS enforcement in production
+- **Strong Password Requirements**: Minimum 12 characters with uppercase, lowercase, number, and special character
+- **Password Hashing**: BCrypt hashing with salt for secure password storage
+- **Environment-Based Security**: JWT HTTPS validation enabled in production, disabled in development
+
+### Infrastructure Security
+- **HTTPS Enforcement**: Required for JWT tokens in production environments
+- **Security Headers**: Configured in nginx (X-Frame-Options, X-Content-Type-Options, etc.)
+- **Input Validation**: Comprehensive validation with detailed error messages
+- **SQL Injection Prevention**: Entity Framework Core parameterized queries
+- **Dependency Security**: Regular updates to address vulnerabilities (0 known vulnerabilities)
 
 ## Contributing
 
@@ -228,10 +276,12 @@ The application uses Aspire's configuration system with automatic service discov
 ## Development Guidelines
 
 - Follow C# coding conventions
-- Write unit tests for new features
+- Write unit tests for new features (maintain test coverage)
 - Update API documentation for new endpoints
 - Ensure TypeScript types are properly defined
 - Run linting before committing frontend changes
+- Keep dependencies updated to address security vulnerabilities
+- Follow security best practices (input validation, HTTPS, strong passwords)
 
 ## License
 
