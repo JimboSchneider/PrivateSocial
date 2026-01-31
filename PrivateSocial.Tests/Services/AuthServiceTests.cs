@@ -35,7 +35,7 @@ public class AuthServiceTests : IDisposable
         // Arrange
         var username = "testuser";
         var email = "test@example.com";
-        var password = "Test123!";
+        var password = "ValidPass123!";
         var firstName = "Test";
         var lastName = "User";
 
@@ -99,7 +99,7 @@ public class AuthServiceTests : IDisposable
     public async Task LoginAsync_WithValidCredentials_ShouldReturnToken()
     {
         // Arrange
-        var password = "Test123!";
+        var password = "ValidPass123!";
         var user = TestDataBuilder.CreateUser(password: password);
         await SeedUser(user);
         
@@ -122,7 +122,7 @@ public class AuthServiceTests : IDisposable
     public async Task LoginAsync_WithInvalidUsername_ShouldReturnError()
     {
         // Act
-        var result = await _authService.LoginAsync("nonexistent", "Test123!");
+        var result = await _authService.LoginAsync("nonexistent", "ValidPass123!");
 
         // Assert
         AssertLoginFailed(result);
@@ -146,7 +146,7 @@ public class AuthServiceTests : IDisposable
     public async Task LoginAsync_WithInactiveUser_ShouldReturnError()
     {
         // Arrange
-        var password = "Test123!";
+        var password = "ValidPass123!";
         var user = TestDataBuilder.CreateUser(password: password, isActive: false);
         await SeedUser(user);
 

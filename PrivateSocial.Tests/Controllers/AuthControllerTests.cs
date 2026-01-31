@@ -33,7 +33,7 @@ public class AuthControllerTests : ControllerTestBase
         {
             Username = "testuser",
             Email = "test@example.com",
-            Password = "Test123!",
+            Password = "ValidPass123!",
             FirstName = "Test",
             LastName = "User"
         };
@@ -87,7 +87,7 @@ public class AuthControllerTests : ControllerTestBase
         {
             Username = "existinguser",
             Email = "existing@example.com",
-            Password = "Test123!",
+            Password = "ValidPass123!",
             FirstName = "Test",
             LastName = "User"
         };
@@ -157,7 +157,7 @@ public class AuthControllerTests : ControllerTestBase
         var request = new LoginRequest
         {
             Username = "testuser",
-            Password = "WrongPassword"
+            Password = "WrongPass123!"
         };
 
         _authServiceMock.Setup(x => x.LoginAsync(request.Username, request.Password))
@@ -207,7 +207,7 @@ public class AuthControllerTests : ControllerTestBase
             Id = 1,
             Username = username,
             Email = "test@example.com",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Test123!"),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("ValidPass123!"),
             FirstName = "Test",
             LastName = "User",
             Bio = "Test bio",

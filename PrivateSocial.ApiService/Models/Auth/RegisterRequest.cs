@@ -14,7 +14,7 @@ public class RegisterRequest
     public required string Email { get; set; }
 
     [Required]
-    [StringLength(100, MinimumLength = 12, ErrorMessage = "Password must be at least 12 characters long")]
+    [StringLength(100, MinimumLength = 12)]
     [StrongPassword]
     public required string Password { get; set; }
 

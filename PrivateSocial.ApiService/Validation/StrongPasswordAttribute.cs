@@ -20,6 +20,11 @@ public partial class StrongPasswordAttribute : ValidationAttribute
             return new ValidationResult("Password is required.");
         }
 
+        if (string.IsNullOrEmpty(password))
+        {
+            return new ValidationResult("Password is required.");
+        }
+
         if (password.Length < MinLength)
         {
             return new ValidationResult($"Password must be at least {MinLength} characters long.");
@@ -42,7 +47,7 @@ public partial class StrongPasswordAttribute : ValidationAttribute
 
         if (!HasSpecialChar().IsMatch(password))
         {
-            return new ValidationResult("Password must contain at least one special character (@$!%*?&).");
+            return new ValidationResult("Password must contain at least one special character.");
         }
 
         return ValidationResult.Success;
@@ -57,6 +62,6 @@ public partial class StrongPasswordAttribute : ValidationAttribute
     [GeneratedRegex(@"\d")]
     private static partial Regex HasDigit();
     
-    [GeneratedRegex(@"[@$!%*?&]")]
+    [GeneratedRegex(@"[@$!%*?&#^()_+=\[\]{}|;:'"",.<>\\/`~-]")]
     private static partial Regex HasSpecialChar();
 }
