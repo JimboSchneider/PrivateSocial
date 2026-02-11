@@ -1,10 +1,12 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PrivateSocial.ApiService.Data;
 using PrivateSocial.ApiService.Data.Entities;
+using PrivateSocial.Contracts.Events;
 
 namespace PrivateSocial.ApiService.Services;
 
@@ -13,12 +15,18 @@ public class AuthService : IAuthService
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthService> _logger;
+    private readonly IPublishEndpoint _publishEndpoint;
 
-    public AuthService(ApplicationDbContext context, IConfiguration configuration, ILogger<AuthService> logger)
+    public AuthService(
+        ApplicationDbContext context,
+        IConfiguration configuration,
+        ILogger<AuthService> logger,
+        IPublishEndpoint publishEndpoint)
     {
         _context = context;
         _configuration = configuration;
         _logger = logger;
+        _publishEndpoint = publishEndpoint;
     }
 
     public async Task<(bool Success, string Token, string Error)> LoginAsync(string username, string password)
@@ -77,6 +85,15 @@ public class AuthService : IAuthService
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
+
+            await _publishEndpoint.Publish(new UserRegistered
+            {
+                CorrelationId = Guid.NewGuid(),
+                UserId = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                RegisteredAt = user.CreatedAt
+            });
 
             return (true, user, string.Empty);
         }

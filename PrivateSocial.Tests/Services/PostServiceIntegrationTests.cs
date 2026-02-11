@@ -1,4 +1,6 @@
 using FluentAssertions;
+using MassTransit;
+using Moq;
 using PrivateSocial.ApiService.Data.Entities;
 using PrivateSocial.ApiService.Models;
 using PrivateSocial.ApiService.Services;
@@ -8,11 +10,13 @@ namespace PrivateSocial.Tests.Services;
 public class PostServiceIntegrationTests : IntegrationTestBase
 {
     private PostService _postService = null!;
+    private Mock<IPublishEndpoint> _publishEndpointMock = null!;
 
     public override async ValueTask InitializeAsync()
     {
         await base.InitializeAsync();
-        _postService = new PostService(Context);
+        _publishEndpointMock = new Mock<IPublishEndpoint>();
+        _postService = new PostService(Context, _publishEndpointMock.Object);
     }
 
     [Fact]

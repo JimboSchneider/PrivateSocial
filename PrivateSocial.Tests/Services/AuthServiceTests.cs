@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using FluentAssertions;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -7,6 +8,7 @@ using Moq;
 using PrivateSocial.ApiService.Data;
 using PrivateSocial.ApiService.Data.Entities;
 using PrivateSocial.ApiService.Services;
+using PrivateSocial.Contracts.Events;
 using PrivateSocial.Tests.Helpers;
 
 namespace PrivateSocial.Tests.Services;
@@ -16,6 +18,7 @@ public class AuthServiceTests : IDisposable
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
     private readonly Mock<ILogger<AuthService>> _loggerMock;
+    private readonly Mock<IPublishEndpoint> _publishEndpointMock;
     private readonly AuthService _authService;
 
     public AuthServiceTests()
@@ -23,8 +26,9 @@ public class AuthServiceTests : IDisposable
         _context = TestDbContextFactory.CreateInMemoryContext();
         _configuration = TestConfigurationBuilder.CreateJwtConfiguration();
         _loggerMock = new Mock<ILogger<AuthService>>();
-        _authService = new AuthService(_context, _configuration, _loggerMock.Object);
-        
+        _publishEndpointMock = new Mock<IPublishEndpoint>();
+        _authService = new AuthService(_context, _configuration, _loggerMock.Object, _publishEndpointMock.Object);
+
         // Reset test data builder for each test class instance
         TestDataBuilder.Reset();
     }
@@ -55,6 +59,16 @@ public class AuthServiceTests : IDisposable
         var savedUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == username, cancellationToken: TestContext.Current.CancellationToken);
         savedUser.Should().NotBeNull();
         BCrypt.Net.BCrypt.Verify(password, savedUser!.PasswordHash).Should().BeTrue();
+
+        // Verify UserRegistered event was published
+        _publishEndpointMock.Verify(
+            x => x.Publish(
+                It.Is<UserRegistered>(e =>
+                    e.Username == username &&
+                    e.Email == email &&
+                    e.UserId == savedUser.Id),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
