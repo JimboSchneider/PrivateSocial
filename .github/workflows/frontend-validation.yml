@@ -2,6 +2,11 @@ name: Frontend Validation
 
 on:
   workflow_call:
+  push:
+    branches: [ main ]
+    paths:
+      - 'PrivateSocial.Web.React/**'
+      - '.github/workflows/frontend-validation.yml'
   pull_request:
     paths:
       - 'PrivateSocial.Web.React/**'
