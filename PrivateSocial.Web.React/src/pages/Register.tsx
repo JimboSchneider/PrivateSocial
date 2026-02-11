@@ -52,7 +52,7 @@ function Register() {
       setError('Password must contain at least one number.')
       return
     }
-    if (!/[@$!%*?&#^()_+=\[\]{}|;:'"",.<>\\/`~-]/.test(formData.password)) {
+    if (!/[@$!%*?&#^()_+=[[\]{}|;:'"",.<>\\/`~-]/.test(formData.password)) {
       setError('Password must contain at least one special character.')
       return
     }
