@@ -14,6 +14,8 @@ public class UserOnboardingState : SagaStateMachineInstance
     public bool WelcomeEmailSent { get; set; }
     public bool DefaultProfileCreated { get; set; }
 
+    public int OnboardingStepsCompleted { get; set; }
+
     public DateTime StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
 }

@@ -12,6 +12,7 @@ public class UserOnboardingSagaStateMachine : MassTransitStateMachine<UserOnboar
     public Event<UserRegistered> UserRegisteredEvent { get; private set; } = null!;
     public Event<WelcomeEmailSent> WelcomeEmailSentEvent { get; private set; } = null!;
     public Event<DefaultProfileCreated> DefaultProfileCreatedEvent { get; private set; } = null!;
+    public Event AllOnboardingStepsCompleted { get; private set; } = null!;
 
     public UserOnboardingSagaStateMachine()
     {
@@ -20,6 +21,10 @@ public class UserOnboardingSagaStateMachine : MassTransitStateMachine<UserOnboar
         Event(() => UserRegisteredEvent, x => x.CorrelateById(ctx => ctx.Message.CorrelationId));
         Event(() => WelcomeEmailSentEvent, x => x.CorrelateById(ctx => ctx.Message.CorrelationId));
         Event(() => DefaultProfileCreatedEvent, x => x.CorrelateById(ctx => ctx.Message.CorrelationId));
+
+        CompositeEvent(() => AllOnboardingStepsCompleted,
+            x => x.OnboardingStepsCompleted,
+            WelcomeEmailSentEvent, DefaultProfileCreatedEvent);
 
         Initially(
             When(UserRegisteredEvent)
@@ -49,40 +54,22 @@ public class UserOnboardingSagaStateMachine : MassTransitStateMachine<UserOnboar
 
         During(OnboardingInProgress,
             When(WelcomeEmailSentEvent)
-                .Then(context =>
-                {
-                    context.Saga.WelcomeEmailSent = true;
-                })
-                .If(context => context.Saga.WelcomeEmailSent && context.Saga.DefaultProfileCreated,
-                    binder => binder
-                        .Then(context => context.Saga.CompletedAt = DateTime.UtcNow)
-                        .Publish(context => new UserOnboardingCompleted
-                        {
-                            CorrelationId = context.Saga.CorrelationId,
-                            UserId = context.Saga.UserId,
-                            Username = context.Saga.Username,
-                            CompletedAt = context.Saga.CompletedAt ?? DateTime.UtcNow
-                        })
-                        .TransitionTo(Completed)
-                        .Finalize()),
+                .Then(context => context.Saga.WelcomeEmailSent = true),
 
             When(DefaultProfileCreatedEvent)
-                .Then(context =>
+                .Then(context => context.Saga.DefaultProfileCreated = true),
+
+            When(AllOnboardingStepsCompleted)
+                .Then(context => context.Saga.CompletedAt = DateTime.UtcNow)
+                .Publish(context => new UserOnboardingCompleted
                 {
-                    context.Saga.DefaultProfileCreated = true;
+                    CorrelationId = context.Saga.CorrelationId,
+                    UserId = context.Saga.UserId,
+                    Username = context.Saga.Username,
+                    CompletedAt = context.Saga.CompletedAt ?? DateTime.UtcNow
                 })
-                .If(context => context.Saga.WelcomeEmailSent && context.Saga.DefaultProfileCreated,
-                    binder => binder
-                        .Then(context => context.Saga.CompletedAt = DateTime.UtcNow)
-                        .Publish(context => new UserOnboardingCompleted
-                        {
-                            CorrelationId = context.Saga.CorrelationId,
-                            UserId = context.Saga.UserId,
-                            Username = context.Saga.Username,
-                            CompletedAt = context.Saga.CompletedAt ?? DateTime.UtcNow
-                        })
-                        .TransitionTo(Completed)
-                        .Finalize())
+                .TransitionTo(Completed)
+                .Finalize()
         );
 
         SetCompletedWhenFinalized();
