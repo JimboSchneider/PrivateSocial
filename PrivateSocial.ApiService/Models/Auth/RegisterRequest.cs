@@ -14,7 +14,7 @@ public class RegisterRequest
     public required string Email { get; set; }
 
     [Required]
-    [StringLength(100, MinimumLength = 12)]
+    [StringLength(100)]
     [StrongPassword]
     public required string Password { get; set; }
 

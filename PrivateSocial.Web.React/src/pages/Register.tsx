@@ -35,9 +35,25 @@ function Register() {
       return
     }
 
-    // Validate password length
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long')
+    // Validate password strength (must match backend StrongPassword rules)
+    if (formData.password.length < 12) {
+      setError('Password must be at least 12 characters and contain uppercase, lowercase, number, and special character.')
+      return
+    }
+    if (!/[A-Z]/.test(formData.password)) {
+      setError('Password must contain at least one uppercase letter.')
+      return
+    }
+    if (!/[a-z]/.test(formData.password)) {
+      setError('Password must contain at least one lowercase letter.')
+      return
+    }
+    if (!/\d/.test(formData.password)) {
+      setError('Password must contain at least one number.')
+      return
+    }
+    if (!/[@$!%*?&#^()_+=\[\]{}|;:'"",.<>\\/`~-]/.test(formData.password)) {
+      setError('Password must contain at least one special character.')
       return
     }
 
@@ -138,9 +154,12 @@ function Register() {
                 value={formData.password}
                 onChange={handleChange}
                 required
-                minLength={6}
+                minLength={12}
                 disabled={isLoading}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                At least 12 characters with uppercase, lowercase, number, and special character.
+              </p>
             </div>
 
             <div>
@@ -153,7 +172,7 @@ function Register() {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 required
-                minLength={6}
+                minLength={12}
                 disabled={isLoading}
               />
             </div>

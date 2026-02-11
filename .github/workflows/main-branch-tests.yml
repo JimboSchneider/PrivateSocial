@@ -44,11 +44,16 @@ jobs:
       run: npm ci
 
     - name: Run Frontend tests with coverage
+      id: frontend-tests
       working-directory: ./PrivateSocial.Web.React
-      run: npm run test:coverage -- --run
-      continue-on-error: true
+      run: |
+        npm run test:coverage -- --run
+        echo "result=success" >> $GITHUB_OUTPUT
+      # If tests fail, the step exits non-zero, so result won't be set
+      # We use the step outcome in the summary instead
 
     - name: Generate test summary
+      if: always()
       run: |
         echo "# Test Summary - Main Branch" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
@@ -65,11 +70,16 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
 
         echo "## Frontend Tests (React)" >> $GITHUB_STEP_SUMMARY
-        echo "- Check coverage report for details" >> $GITHUB_STEP_SUMMARY
+        FRONTEND_OUTCOME="${{ steps.frontend-tests.outcome }}"
+        if [ "$FRONTEND_OUTCOME" = "success" ]; then
+          echo "- ✅ All frontend tests passing" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- ❌ Frontend tests failed" >> $GITHUB_STEP_SUMMARY
+        fi
         echo "" >> $GITHUB_STEP_SUMMARY
 
         echo "## Overall Status" >> $GITHUB_STEP_SUMMARY
-        if [ "$FAILED_TESTS" -eq "0" ]; then
+        if [ "$FAILED_TESTS" -eq "0" ] && [ "$FRONTEND_OUTCOME" = "success" ]; then
           echo "✅ All tests passing on main branch!" >> $GITHUB_STEP_SUMMARY
         else
           echo "⚠️ Some tests failed - immediate attention required!" >> $GITHUB_STEP_SUMMARY
@@ -106,31 +116,78 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const fs = require('fs');
+          const path = require('path');
 
-          // Read test results
+          // Recursively find TRX files
+          function findFiles(dir, pattern) {
+            const results = [];
+            try {
+              const entries = fs.readdirSync(dir, { withFileTypes: true });
+              for (const entry of entries) {
+                const fullPath = path.join(dir, entry.name);
+                if (entry.isDirectory() && entry.name !== 'node_modules') {
+                  results.push(...findFiles(fullPath, pattern));
+                } else if (entry.isFile() && entry.name.endsWith(pattern)) {
+                  results.push(fullPath);
+                }
+              }
+            } catch (e) {
+              // Skip directories we can't read
+            }
+            return results;
+          }
+
+          let backendTotal = 0;
           let backendPassed = 0;
           let backendFailed = 0;
 
-          try {
-            const testResults = fs.readFileSync('./**/TestResults/*.trx', 'utf-8');
-            // Parse TRX for counts
-          } catch (e) {
-            console.log('Could not read test results');
+          const trxFiles = findFiles('.', '.trx');
+          for (const trxFile of trxFiles) {
+            try {
+              const content = fs.readFileSync(trxFile, 'utf-8');
+              const totalMatch = content.match(/total="(\d+)"/);
+              const passedMatch = content.match(/passed="(\d+)"/);
+              const failedMatch = content.match(/failed="(\d+)"/);
+              if (totalMatch) backendTotal += parseInt(totalMatch[1], 10);
+              if (passedMatch) backendPassed += parseInt(passedMatch[1], 10);
+              if (failedMatch) backendFailed += parseInt(failedMatch[1], 10);
+            } catch (e) {
+              console.log(`Could not read ${trxFile}: ${e.message}`);
+            }
           }
 
-          const message = `## 🧪 Test Report - Main Branch
+          const frontendOutcome = '${{ steps.frontend-tests.outcome }}';
+          const frontendStatus = frontendOutcome === 'success'
+            ? '✅ All React tests passing'
+            : '❌ Frontend tests failed';
 
-          ### Backend Tests
-          ✅ All .NET tests passing
+          const backendStatus = backendFailed === 0
+            ? `✅ ${backendPassed}/${backendTotal} .NET tests passing`
+            : `❌ ${backendFailed}/${backendTotal} .NET tests failed`;
 
-          ### Frontend Tests
-          ✅ All React tests passing
+          const allPassing = backendFailed === 0 && frontendOutcome === 'success';
+          const overallStatus = allPassing
+            ? '✅ **Main branch is healthy!**'
+            : '⚠️ **Some tests failed - immediate attention required!**';
 
-          ### Overall Status
-          ✅ **Main branch is healthy!**
+          const message = [
+            '## 🧪 Test Report - Main Branch',
+            '',
+            '### Backend Tests',
+            backendStatus,
+            '',
+            '### Frontend Tests',
+            frontendStatus,
+            '',
+            '### Overall Status',
+            overallStatus,
+            '',
+            `_Last tested: ${new Date().toISOString()}_`
+          ].join('\n');
 
-          _Last tested: ${new Date().toISOString()}_
-          `;
-
-          // This is just for the workflow summary
-          console.log(message);
+          await github.rest.repos.createCommitComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            commit_sha: context.sha,
+            body: message
+          });
