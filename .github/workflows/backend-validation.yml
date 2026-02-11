@@ -2,6 +2,13 @@ name: Backend Validation
 
 on:
   workflow_call:
+  push:
+    branches: [ main ]
+    paths:
+      - '**.cs'
+      - '**.csproj'
+      - '**/appsettings*.json'
+      - '.github/workflows/backend-validation.yml'
   pull_request:
     paths:
       - '**.cs'
