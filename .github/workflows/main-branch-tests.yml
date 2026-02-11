@@ -13,6 +13,8 @@ jobs:
   test-report:
     name: Generate Test Report
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
     - name: Checkout code
