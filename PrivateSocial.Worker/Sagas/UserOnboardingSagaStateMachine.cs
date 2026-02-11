@@ -18,7 +18,15 @@ public class UserOnboardingSagaStateMachine : MassTransitStateMachine<UserOnboar
     {
         InstanceState(x => x.CurrentState);
 
-        Event(() => UserRegisteredEvent, x => x.CorrelateById(ctx => ctx.Message.CorrelationId));
+        Event(() => UserRegisteredEvent, x =>
+        {
+            x.CorrelateById(ctx => ctx.Message.CorrelationId);
+            x.InsertOnInitial = true;
+            x.SetSagaFactory(ctx => new UserOnboardingState
+            {
+                CorrelationId = ctx.Message.CorrelationId
+            });
+        });
         Event(() => WelcomeEmailSentEvent, x => x.CorrelateById(ctx => ctx.Message.CorrelationId));
         Event(() => DefaultProfileCreatedEvent, x => x.CorrelateById(ctx => ctx.Message.CorrelationId));
 

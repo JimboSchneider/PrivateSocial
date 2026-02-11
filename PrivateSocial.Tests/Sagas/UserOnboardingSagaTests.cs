@@ -43,9 +43,7 @@ public class UserOnboardingSagaTests : IAsyncLifetime
         var correlationId = await PublishUserRegisteredAsync(userId: 1, username: "testuser", email: "test@example.com");
 
         // Assert
-        (await _sagaHarness.Created.Any(x => x.CorrelationId == correlationId)).Should().BeTrue();
-
-        var instance = _sagaHarness.Created.ContainsInState(correlationId, _sagaHarness.StateMachine, _sagaHarness.StateMachine.OnboardingInProgress);
+        var instance = _sagaHarness.Sagas.ContainsInState(correlationId, _sagaHarness.StateMachine, _sagaHarness.StateMachine.OnboardingInProgress);
         instance.Should().NotBeNull();
         instance!.UserId.Should().Be(1);
         instance.Username.Should().Be("testuser");
@@ -111,7 +109,7 @@ public class UserOnboardingSagaTests : IAsyncLifetime
         (await _sagaHarness.Consumed.Any<WelcomeEmailSent>()).Should().BeTrue();
 
         // Assert — saga should still be in OnboardingInProgress
-        var instance = _sagaHarness.Created.ContainsInState(correlationId, _sagaHarness.StateMachine, _sagaHarness.StateMachine.OnboardingInProgress);
+        var instance = _sagaHarness.Sagas.ContainsInState(correlationId, _sagaHarness.StateMachine, _sagaHarness.StateMachine.OnboardingInProgress);
         instance.Should().NotBeNull();
         instance!.WelcomeEmailSent.Should().BeTrue();
         instance.DefaultProfileCreated.Should().BeFalse();
