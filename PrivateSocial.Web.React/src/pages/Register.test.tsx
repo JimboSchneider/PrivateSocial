@@ -52,15 +52,15 @@ describe('Register Component', () => {
     await user.type(screen.getByLabelText(/last name/i), 'Doe')
     await user.type(screen.getByLabelText('Username *'), 'johndoe')
     await user.type(screen.getByLabelText('Email *'), 'john@example.com')
-    await user.type(screen.getByLabelText('Password *'), 'password123')
-    await user.type(screen.getByLabelText('Confirm Password *'), 'password123')
+    await user.type(screen.getByLabelText('Password *'), 'P@ssword1234!')
+    await user.type(screen.getByLabelText('Confirm Password *'), 'P@ssword1234!')
     await user.click(screen.getByRole('button', { name: /register/i }))
 
     await waitFor(() => {
       expect(mockRegister).toHaveBeenCalledWith(
         'johndoe',
         'john@example.com',
-        'password123',
+        'P@ssword1234!',
         'John',
         'Doe'
       )
@@ -74,8 +74,8 @@ describe('Register Component', () => {
 
     await user.type(screen.getByLabelText('Username *'), 'johndoe')
     await user.type(screen.getByLabelText('Email *'), 'john@example.com')
-    await user.type(screen.getByLabelText('Password *'), 'password123')
-    await user.type(screen.getByLabelText('Confirm Password *'), 'differentpassword')
+    await user.type(screen.getByLabelText('Password *'), 'P@ssword1234!')
+    await user.type(screen.getByLabelText('Confirm Password *'), 'D!fferentPass1')
     await user.click(screen.getByRole('button', { name: /register/i }))
 
     await waitFor(() => {
@@ -90,12 +90,12 @@ describe('Register Component', () => {
 
     await user.type(screen.getByLabelText('Username *'), 'johndoe')
     await user.type(screen.getByLabelText('Email *'), 'john@example.com')
-    await user.type(screen.getByLabelText('Password *'), '12345')
-    await user.type(screen.getByLabelText('Confirm Password *'), '12345')
+    await user.type(screen.getByLabelText('Password *'), 'Short1!abc')
+    await user.type(screen.getByLabelText('Confirm Password *'), 'Short1!abc')
     await user.click(screen.getByRole('button', { name: /register/i }))
 
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent('Password must be at least 6 characters long')
+      expect(screen.getByRole('alert')).toHaveTextContent('Password must be at least 12 characters')
       expect(mockRegister).not.toHaveBeenCalled()
     })
   })
@@ -109,8 +109,8 @@ describe('Register Component', () => {
 
     await user.type(screen.getByLabelText('Username *'), 'existinguser')
     await user.type(screen.getByLabelText('Email *'), 'existing@example.com')
-    await user.type(screen.getByLabelText('Password *'), 'password123')
-    await user.type(screen.getByLabelText('Confirm Password *'), 'password123')
+    await user.type(screen.getByLabelText('Password *'), 'P@ssword1234!')
+    await user.type(screen.getByLabelText('Confirm Password *'), 'P@ssword1234!')
     await user.click(screen.getByRole('button', { name: /register/i }))
 
     await waitFor(() => {
@@ -128,8 +128,8 @@ describe('Register Component', () => {
     
     await user.type(screen.getByLabelText('Username *'), 'johndoe')
     await user.type(screen.getByLabelText('Email *'), 'john@example.com')
-    await user.type(screen.getByLabelText('Password *'), 'password123')
-    await user.type(screen.getByLabelText('Confirm Password *'), 'password123')
+    await user.type(screen.getByLabelText('Password *'), 'P@ssword1234!')
+    await user.type(screen.getByLabelText('Confirm Password *'), 'P@ssword1234!')
     await user.click(submitButton)
 
     expect(screen.getByLabelText('Username *')).toBeDisabled()
@@ -152,15 +152,15 @@ describe('Register Component', () => {
 
     await user.type(screen.getByLabelText('Username *'), 'johndoe')
     await user.type(screen.getByLabelText('Email *'), 'john@example.com')
-    await user.type(screen.getByLabelText('Password *'), 'password123')
-    await user.type(screen.getByLabelText('Confirm Password *'), 'password123')
+    await user.type(screen.getByLabelText('Password *'), 'P@ssword1234!')
+    await user.type(screen.getByLabelText('Confirm Password *'), 'P@ssword1234!')
     await user.click(screen.getByRole('button', { name: /register/i }))
 
     await waitFor(() => {
       expect(mockRegister).toHaveBeenCalledWith(
         'johndoe',
         'john@example.com',
-        'password123',
+        'P@ssword1234!',
         '',
         ''
       )

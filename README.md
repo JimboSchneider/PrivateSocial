@@ -14,6 +14,8 @@
 
 A modern distributed social platform built with .NET Aspire, showcasing cloud-native patterns and best practices.
 
+> **Note:** This project is under active development. Core features are still being built out and deployment pipelines have not yet been implemented. Contributions and feedback are welcome!
+
 ## Overview
 
 PrivateSocial is a full-stack social networking application demonstrating:

@@ -38,6 +38,7 @@ tsconfig.tsbuildinfo
 *.njsproj
 *.sw?
 *.csproj.user
+*.DotSettings.user
 
 # Claude Code
 .claude/

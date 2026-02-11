@@ -1,6 +1,13 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
+// Configure Redis
+#pragma warning disable ASPIRECERTIFICATES001
 var cache = builder.AddRedis("cache");
+if (!builder.ExecutionContext.IsPublishMode)
+{
+    cache.WithoutHttpsCertificate(); // Disable TLS for local development
+}
+#pragma warning restore ASPIRECERTIFICATES001
 
 // Get SQL Server password from configuration (with fallback for local dev)
 var sqlPassword = builder.AddParameter("sql-password", secret: true);
