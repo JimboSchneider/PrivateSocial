@@ -9,7 +9,7 @@
 ![Node](https://img.shields.io/badge/Node.js-20.x-339933?logo=node.js&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-119%2B-success)
+![Tests](https://img.shields.io/badge/Tests-135%2B-success)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
 A modern distributed social platform built with .NET Aspire, showcasing cloud-native patterns and best practices.
@@ -202,11 +202,13 @@ npm test
 
 ![CI/CD Pipeline](https://github.com/JimboSchneider/PrivateSocial/actions/workflows/ci.yml/badge.svg?branch=main)
 
-The project includes comprehensive test coverage with **119+ tests** across backend and frontend, with automated testing on every push to main:
+The project includes comprehensive test coverage with **135+ tests** across backend and frontend, with automated testing on every push to main:
 
-### Backend Tests (46 tests)
+### Backend Tests (62 tests)
 - **Controller Tests**: Testing API endpoints with mocked dependencies
 - **Service Tests**: Testing business logic with in-memory database
+- **Consumer Tests**: Testing MassTransit message consumers
+- **Saga Tests**: Testing state machine workflows with MassTransit test harness
 - **Integration Tests**: Testing distributed scenarios
 
 Run backend tests:
@@ -234,10 +236,19 @@ PrivateSocial.Tests/
 │   ├── UsersControllerTests.cs
 │   ├── PostsControllerTests.cs
 │   └── ControllerTestBase.cs
+├── Consumers/
+│   ├── CreateDefaultProfileConsumerTests.cs
+│   ├── ModeratePostContentConsumerTests.cs
+│   ├── PostCreatedConsumerTests.cs
+│   ├── SendWelcomeEmailConsumerTests.cs
+│   └── UserRegisteredLogConsumerTests.cs
+├── Sagas/
+│   └── UserOnboardingSagaTests.cs
 ├── Services/
 │   ├── AuthServiceTests.cs
 │   └── PostServiceIntegrationTests.cs
 └── Helpers/
+    ├── ConsumerTestHelpers.cs
     ├── TestDbContextFactory.cs
     ├── TestConfigurationBuilder.cs
     └── TestDataBuilder.cs
