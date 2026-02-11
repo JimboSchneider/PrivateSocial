@@ -5,6 +5,8 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.AddServiceDefaults();
 
+var connectionString = builder.Configuration.GetConnectionString("messaging");
+
 builder.Services.AddMassTransit(x =>
 {
     x.SetKebabCaseEndpointNameFormatter();
@@ -14,15 +16,21 @@ builder.Services.AddMassTransit(x =>
     x.AddSagaStateMachine<UserOnboardingSagaStateMachine, UserOnboardingState>()
         .InMemoryRepository();
 
-    x.UsingRabbitMq((context, cfg) =>
+    if (!string.IsNullOrEmpty(connectionString))
     {
-        var connectionString = builder.Configuration.GetConnectionString("messaging")
-            ?? throw new InvalidOperationException(
-                "RabbitMQ connection string 'messaging' is not configured. Run via PrivateSocial.AppHost or set ConnectionStrings:messaging in appsettings.");
-        cfg.Host(new Uri(connectionString));
-
-        cfg.ConfigureEndpoints(context);
-    });
+        x.UsingRabbitMq((context, cfg) =>
+        {
+            cfg.Host(new Uri(connectionString));
+            cfg.ConfigureEndpoints(context);
+        });
+    }
+    else
+    {
+        x.UsingInMemory((context, cfg) =>
+        {
+            cfg.ConfigureEndpoints(context);
+        });
+    }
 });
 
 var host = builder.Build();
