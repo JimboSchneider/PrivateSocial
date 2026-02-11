@@ -9,7 +9,7 @@
 ![Node](https://img.shields.io/badge/Node.js-20.x-339933?logo=node.js&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-119%2B-success)
+![Tests](https://img.shields.io/badge/Tests-135%2B-success)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
 A modern distributed social platform built with .NET Aspire, showcasing cloud-native patterns and best practices.
@@ -23,6 +23,8 @@ PrivateSocial is a full-stack social networking application demonstrating:
 - React + TypeScript frontend with Docker containerization
 - ASP.NET Core Web API with JWT authentication
 - SQL Server database with Entity Framework Core
+- Asynchronous messaging with RabbitMQ and MassTransit
+- Event-driven workflows with saga state machines
 - Redis caching for performance optimization
 - Comprehensive test coverage with xUnit v3
 - Production-ready nginx configuration
@@ -33,6 +35,7 @@ PrivateSocial is a full-stack social networking application demonstrating:
 - **.NET 10.0** - Backend framework
 - **ASP.NET Core** - Web API framework
 - **Entity Framework Core** - ORM for SQL Server
+- **MassTransit 8.x** - Messaging abstraction with consumers and sagas
 - **JWT Authentication** - Secure token-based auth
 - **xUnit v3** - Testing framework
 - **FluentAssertions** - Test assertions
@@ -50,6 +53,7 @@ PrivateSocial is a full-stack social networking application demonstrating:
 - **Docker** - Container platform
 - **nginx** - Web server for React app
 - **SQL Server** - Primary database
+- **RabbitMQ** - Message broker with management UI
 - **Redis** - Caching layer
 - **.NET Aspire** - Cloud-native orchestration
 
@@ -76,16 +80,19 @@ dotnet run --project PrivateSocial.AppHost
    - **Aspire Dashboard**: https://localhost:17253
    - **React Frontend**: Check dashboard for assigned port
    - **API Documentation**: Check dashboard for API service URL + `/swagger`
+   - **RabbitMQ Management**: Check dashboard for RabbitMQ management URL
 
 ## Architecture
 
 ### Services
 
-1. **PrivateSocial.AppHost** - Orchestrates all services
-2. **PrivateSocial.ApiService** - RESTful API backend
-3. **PrivateSocial.Web.React** - Containerized React frontend
-4. **PrivateSocial.ServiceDefaults** - Shared service configurations
-5. **PrivateSocial.Tests** - Comprehensive test suite
+1. **PrivateSocial.AppHost** - Orchestrates all services (API, Worker, RabbitMQ, SQL Server, Redis)
+2. **PrivateSocial.ApiService** - RESTful API backend, publishes domain events
+3. **PrivateSocial.Worker** - Background service for message consumers and saga orchestration
+4. **PrivateSocial.Contracts** - Shared message contracts (events and commands)
+5. **PrivateSocial.Web.React** - Containerized React frontend
+6. **PrivateSocial.ServiceDefaults** - Shared service configurations
+7. **PrivateSocial.Tests** - Comprehensive test suite
 
 ### Database Schema
 
@@ -155,10 +162,19 @@ npm test
 - **Posts**: Create, read, update, and delete social posts
 - **User Management**: Admin capabilities for user management
 
+### Messaging & Event-Driven Architecture
+- **RabbitMQ**: Durable message broker with management UI, persistent queues via data volumes
+- **MassTransit 8.x**: Messaging abstraction for publish/subscribe and send/receive patterns
+- **Domain Events**: `UserRegistered`, `PostCreated`, `PostUpdated`, `PostDeleted` published after database operations
+- **Commands**: `SendWelcomeEmail`, `ModeratePostContent`, `CreateDefaultProfile` for point-to-point processing
+- **User Onboarding Saga**: State machine orchestrating multi-step onboarding (welcome email + default profile), handles out-of-order completion
+- **Fan-out Events**: Multiple consumers independently process the same event (e.g., logging + saga both handle `UserRegistered`)
+- **Background Worker**: Dedicated worker service for asynchronous processing, decoupled from the API
+
 ### Technical Features
 - **API Documentation**: Interactive Swagger/OpenAPI documentation
 - **Health Checks**: Service health monitoring endpoints
-- **Distributed Tracing**: OpenTelemetry integration
+- **Distributed Tracing**: OpenTelemetry integration (includes MassTransit traces)
 - **Error Handling**: Consistent error responses with Problem Details
 - **Caching**: Redis caching for improved performance
 - **Responsive Design**: Mobile-friendly Tailwind CSS UI
@@ -186,11 +202,13 @@ npm test
 
 ![CI/CD Pipeline](https://github.com/JimboSchneider/PrivateSocial/actions/workflows/ci.yml/badge.svg?branch=main)
 
-The project includes comprehensive test coverage with **119+ tests** across backend and frontend, with automated testing on every push to main:
+The project includes comprehensive test coverage with **135+ tests** across backend and frontend, with automated testing on every push to main:
 
-### Backend Tests (46 tests)
+### Backend Tests (62 tests)
 - **Controller Tests**: Testing API endpoints with mocked dependencies
 - **Service Tests**: Testing business logic with in-memory database
+- **Consumer Tests**: Testing MassTransit message consumers
+- **Saga Tests**: Testing state machine workflows with MassTransit test harness
 - **Integration Tests**: Testing distributed scenarios
 
 Run backend tests:
@@ -218,9 +236,19 @@ PrivateSocial.Tests/
 │   ├── UsersControllerTests.cs
 │   ├── PostsControllerTests.cs
 │   └── ControllerTestBase.cs
+├── Consumers/
+│   ├── CreateDefaultProfileConsumerTests.cs
+│   ├── ModeratePostContentConsumerTests.cs
+│   ├── PostCreatedConsumerTests.cs
+│   ├── SendWelcomeEmailConsumerTests.cs
+│   └── UserRegisteredLogConsumerTests.cs
+├── Sagas/
+│   └── UserOnboardingSagaTests.cs
 ├── Services/
-│   └── AuthServiceTests.cs
+│   ├── AuthServiceTests.cs
+│   └── PostServiceIntegrationTests.cs
 └── Helpers/
+    ├── ConsumerTestHelpers.cs
     ├── TestDbContextFactory.cs
     ├── TestConfigurationBuilder.cs
     └── TestDataBuilder.cs

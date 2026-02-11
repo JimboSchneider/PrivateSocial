@@ -1,18 +1,22 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using PrivateSocial.ApiService.Data;
 using PrivateSocial.ApiService.Data.Entities;
 using PrivateSocial.ApiService.Models;
 using PrivateSocial.ApiService.Extensions;
+using PrivateSocial.Contracts.Events;
 
 namespace PrivateSocial.ApiService.Services;
 
 public class PostService : IPostService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IPublishEndpoint _publishEndpoint;
 
-    public PostService(ApplicationDbContext context)
+    public PostService(ApplicationDbContext context, IPublishEndpoint publishEndpoint)
     {
         _context = context;
+        _publishEndpoint = publishEndpoint;
     }
 
     public async Task<PagedResult<PostDto>> GetPostsAsync(int page, int pageSize)
@@ -63,6 +67,15 @@ public class PostService : IPostService
         _context.Posts.Add(post);
         await _context.SaveChangesAsync();
 
+        await _publishEndpoint.Publish(new PostCreated
+        {
+            CorrelationId = Guid.NewGuid(),
+            PostId = post.Id,
+            UserId = post.UserId,
+            Content = post.Content,
+            CreatedAt = post.CreatedAt
+        });
+
         // Reload with user information
         await _context.Entry(post)
             .Reference(p => p.User)
@@ -98,6 +111,15 @@ public class PostService : IPostService
         post.Content = request.Content;
         await _context.SaveChangesAsync();
 
+        await _publishEndpoint.Publish(new PostUpdated
+        {
+            CorrelationId = Guid.NewGuid(),
+            PostId = post.Id,
+            UserId = post.UserId,
+            Content = post.Content,
+            UpdatedAt = post.UpdatedAt ?? DateTime.UtcNow
+        });
+
         return new PostDto
         {
             Id = post.Id,
@@ -124,8 +146,19 @@ public class PostService : IPostService
             throw new UnauthorizedAccessException("User is not the owner of the post");
         }
 
+        var postId = post.Id;
+        var postUserId = post.UserId;
+
         _context.Posts.Remove(post);
         await _context.SaveChangesAsync();
+
+        await _publishEndpoint.Publish(new PostDeleted
+        {
+            CorrelationId = Guid.NewGuid(),
+            PostId = postId,
+            UserId = postUserId,
+            DeletedAt = DateTime.UtcNow
+        });
 
         return true;
     }

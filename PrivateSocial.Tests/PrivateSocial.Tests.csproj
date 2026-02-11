@@ -30,6 +30,7 @@
     <ItemGroup>
         <ProjectReference Include="..\PrivateSocial.AppHost\PrivateSocial.AppHost.csproj" />
         <ProjectReference Include="..\PrivateSocial.ApiService\PrivateSocial.ApiService.csproj" />
+        <ProjectReference Include="..\PrivateSocial.Worker\PrivateSocial.Worker.csproj" />
     </ItemGroup>
 
     <ItemGroup>

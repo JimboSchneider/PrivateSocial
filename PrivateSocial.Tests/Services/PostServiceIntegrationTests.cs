@@ -1,18 +1,23 @@
 using FluentAssertions;
+using MassTransit;
+using Moq;
 using PrivateSocial.ApiService.Data.Entities;
 using PrivateSocial.ApiService.Models;
 using PrivateSocial.ApiService.Services;
+using PrivateSocial.Contracts.Events;
 
 namespace PrivateSocial.Tests.Services;
 
 public class PostServiceIntegrationTests : IntegrationTestBase
 {
     private PostService _postService = null!;
+    private Mock<IPublishEndpoint> _publishEndpointMock = null!;
 
     public override async ValueTask InitializeAsync()
     {
         await base.InitializeAsync();
-        _postService = new PostService(Context);
+        _publishEndpointMock = new Mock<IPublishEndpoint>();
+        _postService = new PostService(Context, _publishEndpointMock.Object);
     }
 
     [Fact]
@@ -36,6 +41,16 @@ public class PostServiceIntegrationTests : IntegrationTestBase
         var savedPost = await Context.Posts.FindAsync(result.Id);
         savedPost.Should().NotBeNull();
         savedPost!.Content.Should().Be(request.Content);
+
+        // Verify PostCreated event was published
+        _publishEndpointMock.Verify(
+            x => x.Publish(
+                It.Is<PostCreated>(e =>
+                    e.PostId == result.Id &&
+                    e.UserId == user.Id &&
+                    e.Content == request.Content),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -82,6 +97,16 @@ public class PostServiceIntegrationTests : IntegrationTestBase
 
         var updatedPost = await Context.Posts.FindAsync(post.Id);
         updatedPost!.Content.Should().Be("Updated Content");
+
+        // Verify PostUpdated event was published
+        _publishEndpointMock.Verify(
+            x => x.Publish(
+                It.Is<PostUpdated>(e =>
+                    e.PostId == post.Id &&
+                    e.UserId == user.Id &&
+                    e.Content == "Updated Content"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -123,6 +148,15 @@ public class PostServiceIntegrationTests : IntegrationTestBase
         result.Should().BeTrue();
         var deletedPost = await Context.Posts.FindAsync(post.Id);
         deletedPost.Should().BeNull();
+
+        // Verify PostDeleted event was published
+        _publishEndpointMock.Verify(
+            x => x.Publish(
+                It.Is<PostDeleted>(e =>
+                    e.PostId == post.Id &&
+                    e.UserId == user.Id),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

@@ -11,6 +11,11 @@
 
     <ItemGroup>
         <ProjectReference Include="..\PrivateSocial.ServiceDefaults\PrivateSocial.ServiceDefaults.csproj" />
+        <ProjectReference Include="..\PrivateSocial.Contracts\PrivateSocial.Contracts.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="MassTransit.RabbitMQ" Version="8.4.0" />
     </ItemGroup>
 
     <ItemGroup>
